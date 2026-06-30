@@ -1,0 +1,681 @@
+<div class="flex flex-col h-full overflow-hidden relative">
+
+  <!-- ── Import conflict confirmation overlay ─────────────────────────────── -->
+  @if (importPreview()) {
+    <div class="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-800">
+          <h3 class="text-white text-sm font-semibold">Confirmar Import do Wiki — Erros</h3>
+          <p class="text-gray-500 text-xs mt-0.5">
+            A versão do Wiki é mais recente nos erros abaixo e substituirá os dados locais.
+          </p>
+        </div>
+
+        <div class="px-5 py-3 space-y-3 overflow-y-auto max-h-72">
+          @if (importPreview()!.toUpdate.length) {
+            <div>
+              <p class="text-amber-400 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                ~{{ importPreview()!.toUpdate.length }} erro(s) serão substituídos pela versão do Wiki
+              </p>
+              <div class="space-y-1.5">
+                @for (c of importPreview()!.toUpdate; track c.local.id) {
+                  <div class="bg-amber-900/15 border border-amber-700/25 rounded-lg px-3 py-2 text-xs">
+                    <p class="text-gray-300 truncate mb-1" [title]="c.local.description">
+                      {{ c.local.description }}
+                    </p>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      <div>
+                        <span class="text-gray-600 text-[10px] uppercase">Local</span>
+                        <p class="text-gray-400">Status: {{ c.local.status }}</p>
+                        @if (c.local.branchRef) {
+                          <p class="flex items-center gap-1 text-gray-400 font-mono truncate"><svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ c.local.branchRef }}</p>
+                        }
+                      </div>
+                      <div>
+                        <span class="text-amber-600 text-[10px] uppercase">Wiki (novo)</span>
+                        <p class="text-amber-300">Status: {{ c.wiki.status }}</p>
+                        @if (c.wiki.branchRef) {
+                          <p class="flex items-center gap-1 text-amber-300 font-mono truncate"><svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ c.wiki.branchRef }}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (importPreview()!.toAdd.length) {
+            <p class="text-emerald-400 text-xs">
+              + {{ importPreview()!.toAdd.length }} erro(s) novo(s) serão adicionados do Wiki
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-3 border-t border-gray-800">
+          <button (click)="cancelImport()"
+            class="px-4 py-1.5 text-sm text-gray-400 hover:text-white transition rounded-lg">
+            Cancelar
+          </button>
+          <button (click)="confirmImport()"
+            class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg transition">
+            Aceitar versão do Wiki
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Publish conflict confirmation overlay ─────────────────────────────── -->
+  @if (publishPreview()) {
+    <div class="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-800">
+          <h3 class="text-white text-sm font-semibold">Confirmar Publicação na Wiki — Erros</h3>
+          <p class="text-gray-500 text-xs mt-0.5">
+            Revise as diferenças entre o estado local e a Wiki antes de publicar.
+          </p>
+        </div>
+
+        <div class="px-5 py-3 space-y-3 overflow-y-auto max-h-72">
+          @if (publishPreview()!.toUpdate.length) {
+            <div>
+              <p class="text-amber-400 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                ~{{ publishPreview()!.toUpdate.length }} erro(s) na Wiki serão substituídos
+              </p>
+              <div class="space-y-1.5">
+                @for (c of publishPreview()!.toUpdate; track c.local.id) {
+                  <div class="bg-amber-900/15 border border-amber-700/25 rounded-lg px-3 py-2 text-xs">
+                    <p class="text-gray-300 truncate mb-1" [title]="c.local.description">
+                      {{ c.local.description }}
+                    </p>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      <div>
+                        <span class="text-gray-600 text-[10px] uppercase">Wiki atual</span>
+                        <p class="text-gray-400">Status: {{ c.wiki.status }}</p>
+                        @if (c.wiki.branchRef) {
+                          <p class="flex items-center gap-1 text-gray-400 font-mono truncate"><svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ c.wiki.branchRef }}</p>
+                        }
+                      </div>
+                      <div>
+                        <span class="text-indigo-400 text-[10px] uppercase">Local (novo)</span>
+                        <p class="text-indigo-300">Status: {{ c.local.status }}</p>
+                        @if (c.local.branchRef) {
+                          <p class="flex items-center gap-1 text-indigo-300 font-mono truncate"><svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ c.local.branchRef }}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (publishPreview()!.toRemove.length) {
+            <div>
+              <p class="text-red-400 text-xs font-semibold uppercase tracking-wide mb-1">
+                − {{ publishPreview()!.toRemove.length }} erro(s) serão removidos da Wiki
+              </p>
+              <div class="space-y-0.5">
+                @for (e of publishPreview()!.toRemove; track e.id) {
+                  <p class="text-xs text-gray-500 pl-2 truncate" [title]="e.description">
+                    {{ e.description }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
+          @if (publishPreview()!.toAdd.length) {
+            <p class="text-emerald-400 text-xs">
+              + {{ publishPreview()!.toAdd.length }} erro(s) novo(s) serão adicionados à Wiki
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-3 border-t border-gray-800">
+          <button (click)="cancelPublish()"
+            class="px-4 py-1.5 text-sm text-gray-400 hover:text-white transition rounded-lg">
+            Cancelar
+          </button>
+          <button (click)="confirmPublish()"
+            class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition">
+            Confirmar Publicação
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center justify-between px-8 py-4 border-b border-gray-800 shrink-0">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Erros de Desenvolvimento</h2>
+      <p class="text-gray-500 text-xs mt-0.5">Registre e acompanhe por divisão</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Sync status -->
+      @if (wikiImporting()) {
+        <span class="text-xs text-gray-600 flex items-center gap-1">
+          <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Sincronizando...
+        </span>
+      } @else if (lastWikiImport()) {
+        <span class="text-xs text-gray-700">
+          Wiki: {{ formatLastImport(lastWikiImport()!) }}
+        </span>
+      }
+      <button (click)="pullFromWiki()" [disabled]="wikiLoading() || wikiPushing()"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        @if (wikiLoading()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideDownload class="w-3.5 h-3.5"></svg> }
+        Importar Wiki
+      </button>
+      <button (click)="pushToWiki()" [disabled]="wikiPushing() || wikiLoading()"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        @if (wikiPushing()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> }
+        Publicar Wiki
+      </button>
+      @if (csvState() === 'done') {
+        <span class="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 px-2.5 py-1.5 rounded-lg">
+          <svg lucideCheck class="w-3.5 h-3.5"></svg> {{ csvSavedName() }}
+        </span>
+      }
+      <button (click)="exportCsv()" [disabled]="!errors().length || csvState() === 'downloading'"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-40 text-gray-200 text-xs rounded-lg transition-colors"
+        title="Exportar para CSV">
+        @if (csvState() === 'downloading') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Salvando... }
+        @else { <svg lucideDownload class="w-3.5 h-3.5"></svg> CSV }
+      </button>
+      @if (csvImportState() === 'done') {
+        <span class="flex items-center gap-1 text-xs text-indigo-300 bg-indigo-900/20 border border-indigo-700/30 px-2.5 py-1.5 rounded-lg">
+          <svg lucideCheck class="w-3.5 h-3.5"></svg> {{ csvImportMessage() }}
+        </span>
+      } @else {
+        <button (click)="importCsv()" [disabled]="csvImportState() === 'importing'"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+                 disabled:opacity-40 text-gray-200 text-xs rounded-lg transition-colors"
+          title="Importar de CSV">
+          @if (csvImportState() === 'importing') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Importando... }
+          @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> CSV }
+        </button>
+      }
+      <span class="text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2.5 py-1 rounded-full">
+        {{ errors().length }} registro(s)
+      </span>
+    </div>
+  </div>
+
+  <!-- Project switcher + context bar (DESAFIO 2) -->
+  <app-project-switcher />
+  @if (activeProject(); as proj) {
+    <div class="flex items-center gap-0 px-8 border-b border-gray-800/50 bg-gray-950/30 shrink-0 overflow-x-auto divide-x divide-gray-800/60">
+      <!-- Página Wiki -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Página Wiki</span>
+        <span class="text-xs text-gray-400 font-mono">{{ proj.errorsSlug }}</span>
+        @if (proj.wikiProjectPath !== proj.codeProjectPath) {
+          <span class="text-gray-700 text-[10px]">em</span>
+          <span class="text-xs text-gray-500 font-mono">{{ proj.wikiProjectPath }}</span>
+        }
+      </div>
+      <!-- Repo de branches -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Branches</span>
+        <span class="text-xs text-gray-400 font-mono">{{ proj.codeProjectPath }}</span>
+      </div>
+      <!-- Fonte de cards -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Cards</span>
+        <span class="text-xs text-gray-400 font-mono">{{ issuesProjectPath() }}</span>
+      </div>
+    </div>
+  }
+
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sidebar: formulário + grupos -->
+    <div class="w-72 shrink-0 border-r border-gray-800 flex flex-col overflow-y-auto">
+
+      <!-- Formulário -->
+      <div class="px-4 py-4 border-b border-gray-800 space-y-3">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          {{ editingId() ? 'Editar Erro' : 'Novo Erro' }}
+        </h3>
+
+        <!-- Descrição -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Descrição *</label>
+          <textarea [ngModel]="formDescription()" (ngModelChange)="formDescription.set($event)"
+            placeholder="Descreva o erro..." rows="3"
+            class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition resize-none">
+          </textarea>
+        </div>
+
+        <!-- Branch (select ou digitar) -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs text-gray-400">Branch (opcional)</label>
+            <button (click)="formBranchMode.set(formBranchMode() === 'select' ? 'type' : 'select')"
+              class="text-xs text-gray-600 hover:text-gray-400 transition">
+              {{ formBranchMode() === 'select' ? 'Digitar' : 'Selecionar' }}
+            </button>
+          </div>
+          @if (formBranchMode() === 'select') {
+            <!-- Branch picker dropdown -->
+            <div class="relative">
+              <button (click)="branchDropdownOpen.set(!branchDropdownOpen())"
+                class="w-full flex items-center justify-between bg-gray-800 border border-gray-700
+                       text-xs rounded-lg px-3 py-2 text-left transition focus:outline-none
+                       {{ formBranchRef() ? 'text-emerald-300' : 'text-gray-500' }}
+                       hover:border-gray-600">
+                <span class="flex items-center gap-1 truncate font-mono">
+                  @if (formBranchRef()) {
+                    <svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ formBranchRef() }}
+                  } @else {
+                    Selecionar branch...
+                  }
+                </span>
+                <span class="flex items-center gap-1 shrink-0">
+                  @if (formBranchRef()) {
+                    <span (click)="$event.stopPropagation(); clearBranch()"
+                      class="text-gray-600 hover:text-red-400 transition cursor-pointer">
+                      <svg lucideX class="w-3 h-3"></svg>
+                    </span>
+                  }
+                  <svg lucideChevronDown class="w-3 h-3 text-gray-600 transition-transform {{ branchDropdownOpen() ? 'rotate-180' : '' }}"></svg>
+                </span>
+              </button>
+              @if (branchDropdownOpen()) {
+                <div class="absolute top-full left-0 right-0 z-30 mt-1 bg-gray-900 border border-gray-700
+                            rounded-lg shadow-xl overflow-hidden" style="max-height: 200px; display:flex; flex-direction:column;">
+                  <div class="px-2 py-1.5 border-b border-gray-800 shrink-0">
+                    <input type="text"
+                      [ngModel]="branchSearchFilter()" (ngModelChange)="branchSearchFilter.set($event)"
+                      placeholder="Filtrar..."
+                      class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1
+                             focus:outline-none focus:border-indigo-500 transition" autofocus />
+                  </div>
+                  @if (!branches().length) {
+                    <p class="text-gray-600 text-xs px-3 py-3 text-center">
+                      Nenhuma branch. Sincronize primeiro.
+                    </p>
+                  }
+                  <div class="overflow-y-auto flex-1">
+                    <button (click)="selectBranch('')"
+                      class="w-full text-left px-3 py-2 text-xs text-gray-500 hover:bg-gray-800 transition border-b border-gray-800/40">
+                      — Sem branch —
+                    </button>
+                    @for (b of filteredBranchOptions(); track b.name) {
+                      <button (click)="selectBranch(b.name)"
+                        class="w-full flex items-center gap-1.5 text-left px-3 py-2 text-xs font-mono transition
+                               {{ formBranchRef() === b.name
+                                  ? 'bg-emerald-600/20 text-emerald-300'
+                                  : 'text-gray-300 hover:bg-gray-800' }}">
+                        <svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ b.name }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <input type="text"
+              [ngModel]="formBranchRef()" (ngModelChange)="formBranchRef.set($event)"
+              placeholder="feature/nome-da-branch"
+              class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                     placeholder-gray-600 font-mono focus:outline-none focus:border-indigo-500 transition" />
+          }
+        </div>
+
+        <!-- Reportado por -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Reportado por (opcional)</label>
+          <input type="text"
+            [ngModel]="formReportedBy()" (ngModelChange)="formReportedBy.set($event)"
+            placeholder="Ex: João Silva"
+            class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+        </div>
+
+        <!-- Grupo -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Divisão (opcional)</label>
+          <select [ngModel]="formGroup()" (ngModelChange)="formGroup.set($event)"
+            class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                   focus:outline-none focus:border-indigo-500 transition">
+            <option value="">— Sem divisão —</option>
+            @for (g of groups(); track g) {
+              <option [value]="g">{{ g }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Status</label>
+          <select [ngModel]="formStatus()" (ngModelChange)="formStatus.set($event)"
+            class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                   focus:outline-none focus:border-indigo-500 transition">
+            @for (s of statusOptions; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Resolução (visível quando Resolvido ou FalsoPositivo) -->
+        @if (showResolutionFields()) {
+          <div class="border border-emerald-800/30 bg-emerald-900/10 rounded-lg px-3 py-3 space-y-2">
+            <p class="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">Resolução (opcional)</p>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs text-gray-400">Branch da solução</label>
+                <button (click)="formResolutionBranchMode.set(formResolutionBranchMode() === 'select' ? 'type' : 'select')"
+                  class="text-xs text-gray-600 hover:text-gray-400 transition">
+                  {{ formResolutionBranchMode() === 'select' ? 'Digitar' : 'Selecionar' }}
+                </button>
+              </div>
+              @if (formResolutionBranchMode() === 'select') {
+                <select [ngModel]="formResolutionBranch()" (ngModelChange)="formResolutionBranch.set($event)"
+                  class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                         font-mono focus:outline-none focus:border-emerald-600 transition">
+                  <option value="">— Sem branch —</option>
+                  @for (b of branches(); track b.name) {
+                    <option [value]="b.name">⎇ {{ b.name }}</option>
+                  }
+                </select>
+              } @else {
+                <input type="text"
+                  [ngModel]="formResolutionBranch()" (ngModelChange)="formResolutionBranch.set($event)"
+                  placeholder="feature/fix-nome"
+                  class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                         placeholder-gray-600 font-mono focus:outline-none focus:border-emerald-600 transition" />
+              }
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Descrição da solução</label>
+              <textarea [ngModel]="formResolutionDescription()" (ngModelChange)="formResolutionDescription.set($event)"
+                placeholder="O que foi feito para resolver..." rows="2"
+                class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                       placeholder-gray-600 focus:outline-none focus:border-emerald-600 transition resize-none">
+              </textarea>
+            </div>
+          </div>
+        }
+
+        <!-- Botões -->
+        <div class="flex gap-2">
+          <button (click)="submitForm()" [disabled]="!formDescription().trim() || saving()"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500
+                   disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors">
+            @if (saving()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> }
+            {{ editingId() ? 'Salvar' : 'Adicionar' }}
+          </button>
+          @if (editingId()) {
+            <button (click)="cancelEdit()"
+              class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors">
+              Cancelar
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Gestão de divisões de erros -->
+      <div class="px-4 py-3 space-y-2">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Divisões de Erros</h3>
+        <p class="text-xs text-gray-700 -mt-1">Grupos para categorizar erros (ex: Frontend, Backend)</p>
+        @for (g of groups(); track g) {
+          @if (renamingGroupOld() === g) {
+            <div class="flex items-center gap-1">
+              <input type="text"
+                [ngModel]="renamingGroupNew()" (ngModelChange)="renamingGroupNew.set($event)"
+                (keydown.enter)="confirmRenameGroup()"
+                (keydown.escape)="cancelRenameGroup()"
+                class="flex-1 bg-gray-800 border border-indigo-500 text-white text-xs rounded px-2 py-1
+                       focus:outline-none min-w-0" />
+              <button (click)="confirmRenameGroup()" class="text-emerald-400"><svg lucideCheck class="w-3.5 h-3.5"></svg></button>
+              <button (click)="cancelRenameGroup()" class="text-gray-600"><svg lucideX class="w-3.5 h-3.5"></svg></button>
+            </div>
+          } @else {
+            <div class="flex items-center gap-1 group">
+              <span class="flex-1 text-xs text-gray-300 truncate">{{ g }}</span>
+              <button (click)="startRenameGroup(g)"
+                class="text-gray-700 hover:text-indigo-400 transition opacity-0 group-hover:opacity-100"><svg lucidePencil class="w-3 h-3"></svg></button>
+              <button (click)="removeGroup(g)"
+                class="text-gray-700 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><svg lucideX class="w-3 h-3"></svg></button>
+            </div>
+          }
+        }
+        @if (!groups().length) {
+          <p class="text-gray-700 text-xs italic">Nenhuma divisão criada</p>
+        }
+        <div class="flex gap-1 mt-2">
+          <input type="text"
+            [ngModel]="newGroupName()" (ngModelChange)="newGroupName.set($event)"
+            (keydown)="onGroupKeydown($event)"
+            placeholder="Nova divisão..."
+            class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1.5
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition min-w-0" />
+          <button (click)="addGroup()" [disabled]="!newGroupName().trim()"
+            class="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40
+                   text-white text-xs rounded transition-colors">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de erros agrupados -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Barra de ação em lote (visível quando há seleção) -->
+      @if (selectedCount()) {
+        <div class="flex items-center gap-3 px-4 py-2 bg-indigo-900/20 border-b border-indigo-700/40 shrink-0">
+          <span class="text-xs text-indigo-300 font-medium">
+            {{ selectedCount() }} selecionado(s)
+          </span>
+          <span class="text-gray-700 text-xs">Alterar status:</span>
+          @for (s of statusOptions; track s) {
+            <button (click)="batchChangeStatus(s)"
+              class="text-xs px-2.5 py-1 rounded-full border transition-all {{ statusChipClass(s) }} hover:brightness-125">
+              {{ s }}
+            </button>
+          }
+          <button (click)="clearSelection()"
+            class="ml-auto text-xs text-gray-600 hover:text-gray-400 transition">
+            Limpar seleção
+          </button>
+        </div>
+      }
+
+      <!-- Barra de filtros -->
+      <div class="flex items-center gap-2 px-4 py-2 border-b border-gray-800 bg-gray-900/40 shrink-0 flex-wrap">
+        <!-- Selecionar tudo (visíveis) -->
+        <label class="flex items-center gap-1.5 cursor-pointer shrink-0" title="Selecionar todos visíveis">
+          <input type="checkbox"
+            [ngModel]="allVisibleSelected()" (ngModelChange)="toggleSelectAll()"
+            class="accent-indigo-500 w-3.5 h-3.5" />
+          <span class="text-xs text-gray-600">Todos</span>
+        </label>
+        <span class="text-gray-800 text-xs">|</span>
+        <span class="text-xs text-gray-600 shrink-0">Status:</span>
+        <button (click)="viewStatusFilter.set('')"
+          class="text-xs px-2.5 py-1 rounded-full border transition-all
+                 {{ viewStatusFilter() === ''
+                    ? 'bg-gray-600/30 border-gray-500/50 text-gray-300'
+                    : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400' }}">
+          Todos
+        </button>
+        @for (s of statusOptions; track s) {
+          <button (click)="viewStatusFilter.set(viewStatusFilter() === s ? '' : s)"
+            class="text-xs px-2.5 py-1 rounded-full border transition-all
+                   {{ viewStatusFilter() === s
+                      ? statusChipClass(s)
+                      : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400' }}">
+            {{ s }}
+          </button>
+        }
+        <div class="flex-1"></div>
+        @if (groups().length) {
+          <select [ngModel]="viewGroupFilter()" (ngModelChange)="viewGroupFilter.set($event)"
+            class="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1
+                   focus:outline-none focus:border-indigo-500 transition max-w-[140px]">
+            <option value="">Todas as divisões</option>
+            @for (g of groups(); track g) { <option [value]="g">{{ g }}</option> }
+          </select>
+        }
+        <input type="text" #branchFilterInput
+          [ngModel]="viewBranchFilter()" (ngModelChange)="viewBranchFilter.set($event)"
+          placeholder="Filtrar branch... (/)"
+          class="bg-gray-800 border border-gray-700 text-white text-xs rounded px-2.5 py-1
+                 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition w-28" />
+        <span class="text-xs text-gray-600 shrink-0">{{ filteredErrorsCount() }}/{{ errors().length }}</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+      @if (!errors().length) {
+        <div class="flex flex-col items-center justify-center h-full text-center px-8">
+          <p class="text-gray-600 text-sm">Nenhum erro registrado.</p>
+          <p class="text-gray-700 text-xs mt-1">Use o formulário ao lado para adicionar.</p>
+        </div>
+      } @else if (!filteredErrorsCount()) {
+        <div class="flex flex-col items-center justify-center h-full text-center px-8">
+          <p class="text-gray-600 text-sm">Nenhum erro corresponde aos filtros.</p>
+        </div>
+      } @else {
+        @for (grp of filteredGroupedErrors(); track grp.group) {
+          <!-- Group header -->
+          <div class="flex items-center gap-2 px-6 py-2 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
+            @if (grp.group) {
+              <span class="text-xs font-medium text-purple-300 bg-purple-900/30 px-2 py-0.5 rounded">
+                {{ grp.group }}
+              </span>
+            } @else {
+              <span class="text-xs text-gray-600 italic">Sem divisão</span>
+            }
+            <span class="text-xs text-gray-700">{{ grp.errors.length }}</span>
+          </div>
+          <!-- Errors in group -->
+          <table class="w-full text-sm">
+            <tbody>
+              @for (error of grp.errors; track error.id) {
+                <tr class="border-b border-gray-800/40 hover:bg-gray-800/20 transition-colors
+                           {{ editingId() === error.id ? 'bg-indigo-900/10' : '' }}
+                           {{ isErrorSelected(error.id) ? 'bg-indigo-900/10' : '' }}">
+                  <td class="pl-3 pr-1 py-2.5 w-8 shrink-0">
+                    <input type="checkbox"
+                      [ngModel]="isErrorSelected(error.id)"
+                      (ngModelChange)="toggleSelectError(error.id)"
+                      class="accent-indigo-500 w-3.5 h-3.5 cursor-pointer" />
+                  </td>
+                  <td class="px-4 py-2.5 text-gray-200 max-w-xs">
+                    <p class="text-sm leading-snug">{{ error.description }}</p>
+                    @if (error.resolutionDescription) {
+                      <p class="flex items-center gap-1 text-xs text-emerald-600 mt-0.5 leading-snug" [title]="error.resolutionDescription">
+                        <svg lucideCheck class="w-3 h-3 shrink-0"></svg> {{ error.resolutionDescription }}
+                      </p>
+                    }
+                  </td>
+                  <td class="px-3 py-2.5 w-44">
+                    @if (error.branchRef) {
+                      <span class="flex items-center gap-1 font-mono text-emerald-300 text-xs bg-gray-800 px-2 py-0.5 rounded truncate max-w-[160px]"
+                            [title]="error.branchRef">
+                        <svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ error.branchRef }}
+                      </span>
+                    } @else {
+                      <span class="text-gray-700 text-xs">—</span>
+                    }
+                    @if (error.resolutionBranch) {
+                      <span class="flex items-center gap-1 font-mono text-emerald-600 text-xs mt-0.5 truncate max-w-[160px]"
+                            [title]="error.resolutionBranch">
+                        <svg lucideArrowRight class="w-3 h-3 shrink-0"></svg> {{ error.resolutionBranch }}
+                      </span>
+                    }
+                  </td>
+                  <td class="px-3 py-2.5 w-32">
+                    <span class="text-xs border rounded-full px-2 py-0.5 {{ statusClass(error.status) }}">
+                      {{ error.status }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2.5 w-32 text-gray-400 text-xs">
+                    {{ error.reportedBy || '—' }}
+                  </td>
+                  <td class="px-3 py-2.5 text-gray-500 text-xs w-20 whitespace-nowrap">
+                    {{ formatDate(error.createdAt) }}
+                  </td>
+                  <td class="px-3 py-2.5 w-20">
+                    <div class="flex items-center gap-1.5 justify-end">
+                      @if (error.status === 'Pendente') {
+                        <button (click)="openQuickResolve(error)"
+                          class="px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-400
+                                 hover:bg-emerald-800/60 transition shrink-0" title="Resolver">
+                          <svg lucideCheck class="w-3.5 h-3.5"></svg>
+                        </button>
+                      }
+                      <button (click)="startEdit(error)"
+                        class="text-gray-600 hover:text-indigo-400 transition" title="Editar"><svg lucidePencil class="w-3.5 h-3.5"></svg></button>
+                      <button (click)="deleteError(error.id)"
+                        class="text-gray-600 hover:text-red-400 transition" title="Excluir"><svg lucideTrash2 class="w-3.5 h-3.5"></svg></button>
+                    </div>
+                  </td>
+                </tr>
+                <!-- Quick-resolve inline form -->
+                @if (resolvingId() === error.id) {
+                  <tr class="bg-emerald-900/10 border-b border-emerald-800/30">
+                    <td colspan="7" class="px-5 py-2.5">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-medium text-emerald-400 shrink-0">Resolver:</span>
+                        <div class="flex-1 min-w-36 flex items-center gap-1">
+                          @if (resolveFormBranchMode() === 'select') {
+                            <select [ngModel]="resolveFormBranch()" (ngModelChange)="resolveFormBranch.set($event)"
+                              class="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-xs rounded
+                                     px-2 py-1.5 font-mono focus:outline-none focus:border-emerald-600 transition">
+                              <option value="">— Sem branch —</option>
+                              @for (b of branches(); track b.name) {
+                                <option [value]="b.name">⎇ {{ b.name }}</option>
+                              }
+                            </select>
+                          } @else {
+                            <input type="text"
+                              [ngModel]="resolveFormBranch()" (ngModelChange)="resolveFormBranch.set($event)"
+                              placeholder="Branch da solução (opcional)"
+                              class="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-xs rounded
+                                     px-2.5 py-1.5 placeholder-gray-600 font-mono focus:outline-none
+                                     focus:border-emerald-600 transition" />
+                          }
+                          <button (click)="resolveFormBranchMode.set(resolveFormBranchMode() === 'select' ? 'type' : 'select')"
+                            class="text-gray-600 hover:text-gray-400 transition shrink-0 px-1"
+                            title="Alternar: selecionar / digitar">
+                            @if (resolveFormBranchMode() === 'select') {
+                              <svg lucideKeyboard class="w-3 h-3"></svg>
+                            } @else {
+                              <svg lucideList class="w-3 h-3"></svg>
+                            }
+                          </button>
+                        </div>
+                        <input type="text"
+                          [ngModel]="resolveFormDesc()" (ngModelChange)="resolveFormDesc.set($event)"
+                          placeholder="Descrição da solução (opcional)"
+                          class="flex-[2] min-w-44 bg-gray-800 border border-gray-700 text-white text-xs rounded
+                                 px-2.5 py-1.5 placeholder-gray-600 focus:outline-none
+                                 focus:border-emerald-600 transition" />
+                        <button (click)="submitQuickResolve(error)"
+                          class="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white
+                                 rounded transition shrink-0">
+                          Confirmar
+                        </button>
+                        <button (click)="cancelQuickResolve()"
+                          class="text-xs px-2 py-1.5 text-gray-500 hover:text-gray-300 transition">
+                          Cancelar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        }
+      }
+      </div><!-- /flex-1 overflow-y-auto -->
+    </div><!-- /flex-1 flex flex-col -->
+
+  </div>
+</div>

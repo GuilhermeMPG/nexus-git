@@ -11,26 +11,25 @@
 
 ## 1. Visão geral
 
-O Nexus-Git conecta dois repositórios distintos do GitLab:
+O Nexus-Git conecta repositórios do GitLab, configuráveis por projeto:
 
-| Papel | Repositório | Permissão do PAT |
+| Papel | Repositório (exemplo) | Permissão do PAT |
 |---|---|---|
-| **Origem** (Issues) | `prodemge-doc/DSG/STC/GDC/Mgapp-doc` | Developer |
-| **Destino** (Branches + Wiki) | `prodemge/g2ap` | Maintainer |
+| **Origem** (Issues) | `grupo/projeto-de-issues` | Developer |
+| **Destino** (Branches + Wiki) | `grupo/projeto-de-codigo` | Maintainer |
 
 Fluxo de valor:
 
 ```
-[Issues do Mgapp-doc] ──┐
-                        ├──> [UI de Vínculo] ──> [Markdown] ──> [Wiki do g2ap]
-[Branches do g2ap]   ──┘                                          (2 páginas)
+[Issues do projeto de origem] ──┐
+                                ├──> [UI de Vínculo] ──> [Markdown] ──> [Wiki do projeto]
+[Branches do projeto de código] ┘
 
-[Erros cadastrados manualmente] ──> [Markdown] ──> [Wiki do g2ap]
+[Erros cadastrados manualmente] ──> [Markdown] ──> [Wiki do projeto]
 ```
 
-A instância GitLab alvo é **self-hosted**: `https://git.prodemge.gov.br/`.
-A URL base é **configurável em runtime** (campo na tela de configuração), permitindo
-testar contra `gitlab.com` ou outros ambientes.
+A URL base do GitLab é **configurável em runtime** (campo na tela de configuração),
+suportando tanto `gitlab.com` quanto instâncias self-hosted com CA própria.
 
 ---
 
@@ -182,9 +181,9 @@ interface DevError {
 
 // Configuração persistida (NÃO inclui o token — esse vai pro keyring)
 interface AppConfig {
-  gitlabBaseUrl: string;  // ex.: https://git.prodemge.gov.br
-  issuesProjectPath: string;  // prodemge-doc/DSG/STC/GDC/Mgapp-doc
-  codeProjectPath: string;    // prodemge/g2ap
+  gitlabBaseUrl: string;  // ex.: https://gitlab.com ou instância self-hosted
+  issuesProjectPath: string;  // ex.: grupo/projeto-de-issues
+  codeProjectPath: string;    // ex.: grupo/projeto-de-codigo
 }
 ```
 
@@ -216,7 +215,7 @@ amigável.
 
 Base: `{gitlabBaseUrl}/api/v4`. Auth via header `PRIVATE-TOKEN: {pat}`.
 O `:id` do projeto pode ser o ID numérico **ou** o path URL-encoded
-(ex.: `prodemge%2Fg2ap`).
+(ex.: `grupo%2Fprojeto`).
 
 | Função | Método | Endpoint |
 |---|---|---|
@@ -306,10 +305,10 @@ Verificação rápida após instalar: `rustc --version` e `cargo --version`.
 
 ## 12. Riscos e pontos a confirmar
 
-- [ ] **Project IDs numéricos** de `Mgapp-doc` e `g2ap` (ou usar path encoded).
-- [ ] **Certificado/CA interna** da instância `git.prodemge.gov.br` — pode exigir
+- [ ] **Project IDs numéricos** dos projetos de issues e de código (ou usar path encoded).
+- [ ] **Certificado/CA interna** de instâncias self-hosted — pode exigir
       config no `reqwest` (verificar se TLS valida normalmente).
-- [ ] **Permissão de Wiki:** confirmar que o PAT (Maintainer) consegue escrever na Wiki do `g2ap`.
+- [ ] **Permissão de Wiki:** confirmar que o PAT (Maintainer) consegue escrever na Wiki do projeto de código.
 - [ ] **Política de rede/proxy** corporativo que possa interceptar as chamadas.
 - [ ] Validar nomes exatos dos slugs de Wiki desejados.
 ```

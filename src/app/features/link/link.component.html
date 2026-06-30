@@ -1,0 +1,542 @@
+<div class="flex flex-col h-full overflow-hidden relative">
+
+  <!-- ── Import conflict confirmation overlay ─────────────────────────────── -->
+  @if (importPreview()) {
+    <div class="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-800">
+          <h3 class="text-white text-sm font-semibold">Confirmar Import do Wiki</h3>
+          <p class="text-gray-500 text-xs mt-0.5">
+            A versão do Wiki é mais recente nos vínculos abaixo e substituirá os dados locais.
+          </p>
+        </div>
+
+        <div class="px-5 py-3 space-y-3 overflow-y-auto max-h-72">
+          @if (importPreview()!.toUpdate.length) {
+            <div>
+              <p class="text-amber-400 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                ~{{ importPreview()!.toUpdate.length }} vínculo(s) serão substituídos pela versão do Wiki
+              </p>
+              <div class="space-y-1.5">
+                @for (c of importPreview()!.toUpdate; track c.local.issueIid) {
+                  <div class="bg-amber-900/15 border border-amber-700/25 rounded-lg px-3 py-2 text-xs">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <span class="text-indigo-400 font-mono">#{{ c.local.issueIid }}</span>
+                      <span class="text-gray-300 truncate">{{ c.local.issueTitle }}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      <div>
+                        <span class="text-gray-600 text-[10px] uppercase">Local</span>
+                        <p class="text-gray-400">Sprint: {{ c.local.sprintName || '—' }}</p>
+                        <p class="text-gray-400 font-mono truncate">{{ c.local.branchNames.join(', ') }}</p>
+                      </div>
+                      <div>
+                        <span class="text-amber-600 text-[10px] uppercase">Wiki (novo)</span>
+                        <p class="text-amber-300">Sprint: {{ c.wiki.sprintName || '—' }}</p>
+                        <p class="text-amber-300 font-mono truncate">{{ c.wiki.branchNames.join(', ') }}</p>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (importPreview()!.toAdd.length) {
+            <p class="text-emerald-400 text-xs">
+              + {{ importPreview()!.toAdd.length }} vínculo(s) novo(s) serão adicionados do Wiki
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-3 border-t border-gray-800">
+          <button (click)="cancelImport()"
+            class="px-4 py-1.5 text-sm text-gray-400 hover:text-white transition rounded-lg">
+            Cancelar
+          </button>
+          <button (click)="confirmImport()"
+            class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg transition">
+            Aceitar versão do Wiki
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Publish conflict confirmation overlay ─────────────────────────────── -->
+  @if (publishPreview()) {
+    <div class="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col">
+        <div class="px-5 pt-5 pb-3 border-b border-gray-800">
+          <h3 class="text-white text-sm font-semibold">Confirmar Publicação na Wiki</h3>
+          <p class="text-gray-500 text-xs mt-0.5">
+            Revise as diferenças entre o estado local e a Wiki antes de publicar.
+          </p>
+        </div>
+
+        <div class="px-5 py-3 space-y-3 overflow-y-auto max-h-72">
+          @if (publishPreview()!.toUpdate.length) {
+            <div>
+              <p class="text-amber-400 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                ~{{ publishPreview()!.toUpdate.length }} vínculo(s) na Wiki serão substituídos
+              </p>
+              <div class="space-y-1.5">
+                @for (c of publishPreview()!.toUpdate; track c.local.issueIid) {
+                  <div class="bg-amber-900/15 border border-amber-700/25 rounded-lg px-3 py-2 text-xs">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <span class="text-indigo-400 font-mono">#{{ c.local.issueIid }}</span>
+                      <span class="text-gray-300 truncate">{{ c.local.issueTitle }}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      <div>
+                        <span class="text-gray-600 text-[10px] uppercase">Wiki atual</span>
+                        <p class="text-gray-400">Sprint: {{ c.wiki.sprintName || '—' }}</p>
+                        <p class="text-gray-400 font-mono truncate">{{ c.wiki.branchNames.join(', ') }}</p>
+                      </div>
+                      <div>
+                        <span class="text-indigo-400 text-[10px] uppercase">Local (novo)</span>
+                        <p class="text-indigo-300">Sprint: {{ c.local.sprintName || '—' }}</p>
+                        <p class="text-indigo-300 font-mono truncate">{{ c.local.branchNames.join(', ') }}</p>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (publishPreview()!.toRemove.length) {
+            <div>
+              <p class="text-red-400 text-xs font-semibold uppercase tracking-wide mb-1">
+                − {{ publishPreview()!.toRemove.length }} vínculo(s) serão removidos da Wiki
+              </p>
+              <div class="space-y-0.5">
+                @for (l of publishPreview()!.toRemove; track l.issueIid) {
+                  <p class="text-xs text-gray-500 pl-2">
+                    <span class="text-indigo-400/60 font-mono">#{{ l.issueIid }}</span>
+                    {{ l.issueTitle }}
+                  </p>
+                }
+              </div>
+            </div>
+          }
+          @if (publishPreview()!.toAdd.length) {
+            <p class="text-emerald-400 text-xs">
+              + {{ publishPreview()!.toAdd.length }} vínculo(s) novo(s) serão adicionados à Wiki
+            </p>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2 px-5 py-3 border-t border-gray-800">
+          <button (click)="cancelPublish()"
+            class="px-4 py-1.5 text-sm text-gray-400 hover:text-white transition rounded-lg">
+            Cancelar
+          </button>
+          <button (click)="confirmPublish()"
+            class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition">
+            Confirmar Publicação
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center justify-between px-8 py-4 border-b border-gray-800 shrink-0">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Vínculos</h2>
+      <p class="text-gray-500 text-xs mt-0.5">Associe cards a branches por sprint</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Sync status -->
+      @if (wikiImporting()) {
+        <span class="text-xs text-gray-600 flex items-center gap-1">
+          <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Sincronizando...
+        </span>
+      } @else if (lastWikiImport()) {
+        <span class="text-xs text-gray-700">
+          Wiki: {{ formatLastImport(lastWikiImport()!) }}
+        </span>
+      }
+      <button (click)="pullFromWiki()" [disabled]="wikiLoading() || wikiPushing()"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        @if (wikiLoading()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideDownload class="w-3.5 h-3.5"></svg> }
+        Importar Wiki
+      </button>
+      <button (click)="pushToWiki()" [disabled]="wikiPushing() || wikiLoading()"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        @if (wikiPushing()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> }
+        Publicar Wiki
+      </button>
+      @if (csvState() === 'done') {
+        <span class="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 px-2.5 py-1.5 rounded-lg">
+          <svg lucideCheck class="w-3.5 h-3.5"></svg> {{ csvSavedName() }}
+        </span>
+      }
+      <button (click)="exportCsv()" [disabled]="!links().length || csvState() === 'downloading'"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-40 text-gray-200 text-xs rounded-lg transition-colors"
+        title="Exportar vínculos para CSV">
+        @if (csvState() === 'downloading') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Salvando... }
+        @else { <svg lucideDownload class="w-3.5 h-3.5"></svg> CSV }
+      </button>
+      @if (csvImportState() === 'done') {
+        <span class="flex items-center gap-1 text-xs text-indigo-300 bg-indigo-900/20 border border-indigo-700/30 px-2.5 py-1.5 rounded-lg">
+          <svg lucideCheck class="w-3.5 h-3.5"></svg> {{ csvImportMessage() }}
+        </span>
+      } @else {
+        <button (click)="importCsv()" [disabled]="csvImportState() === 'importing'"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+                 disabled:opacity-40 text-gray-200 text-xs rounded-lg transition-colors"
+          title="Importar vínculos de CSV">
+          @if (csvImportState() === 'importing') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Importando... }
+          @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> CSV }
+        </button>
+      }
+      @if (selectedIssue()) {
+        <button (click)="save()" [disabled]="!canSave() || saving()"
+          class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500
+                 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+          @if (saving()) { <svg lucideLoaderCircle class="w-4 h-4 animate-spin"></svg> Salvando... }
+          @else { <svg lucideLink2 class="w-4 h-4"></svg> Vincular ({{ selectedBranches().size }}) }
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Project switcher + context bar (DESAFIO 2) -->
+  <app-project-switcher />
+  @if (activeProject(); as proj) {
+    <div class="flex items-center gap-0 px-8 border-b border-gray-800/50 bg-gray-950/30 shrink-0 overflow-x-auto divide-x divide-gray-800/60">
+      <!-- Página Wiki -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Página Wiki</span>
+        <span class="text-xs text-gray-400 font-mono">{{ proj.linksSlug }}</span>
+        @if (proj.wikiProjectPath !== proj.codeProjectPath) {
+          <span class="text-gray-700 text-[10px]">em</span>
+          <span class="text-xs text-gray-500 font-mono">{{ proj.wikiProjectPath }}</span>
+        }
+      </div>
+      <!-- Repo de branches -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Branches</span>
+        <span class="text-xs text-gray-400 font-mono">{{ proj.codeProjectPath }}</span>
+      </div>
+      <!-- Fonte de cards -->
+      <div class="flex items-center gap-1.5 px-3 py-1.5 shrink-0">
+        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Cards</span>
+        <span class="text-xs text-gray-400 font-mono">{{ issuesProjectPath() }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- Sugestões automáticas de vínculo por padrão de nome de branch -->
+  @if (autoSuggestions().length) {
+    <div class="border-b border-amber-800/40 bg-amber-900/10 px-8 py-2.5 shrink-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="flex items-center gap-1 text-xs font-semibold text-amber-400 shrink-0">
+          <svg lucideSparkles class="w-3.5 h-3.5"></svg> {{ autoSuggestions().length }} sugestão(ões) detectada(s):
+        </span>
+        @for (s of autoSuggestions(); track s.branch.name) {
+          <div class="flex items-center gap-1 bg-gray-800 border border-amber-700/30 rounded-full px-2.5 py-1 text-xs">
+            <span class="flex items-center gap-1 text-emerald-400 font-mono truncate max-w-[140px]" [title]="s.branch.name">
+              <svg lucideGitBranch class="w-3 h-3 shrink-0"></svg> {{ s.branch.name }}
+            </span>
+            <svg lucideArrowRight class="w-3 h-3 text-gray-600"></svg>
+            <span class="text-indigo-400 shrink-0">#{{ s.issue.iid }}</span>
+            <button (click)="acceptSuggestion(s.issue, s.branch)"
+              class="text-xs bg-amber-600/30 hover:bg-amber-600/60 text-amber-300 px-1.5 py-0.5 rounded ml-1 transition">
+              Aceitar
+            </button>
+          </div>
+        }
+        <button (click)="acceptAllSuggestions()"
+          class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded-full transition ml-auto shrink-0">
+          Aceitar tudo
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Layout principal: seleção (2 colunas) + sprint bar -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sprint sidebar -->
+    <div class="w-52 shrink-0 border-r border-gray-800 flex flex-col overflow-hidden">
+      <div class="px-3 py-2.5 border-b border-gray-800 shrink-0">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sprints</p>
+      </div>
+      <!-- Sprint list -->
+      <div class="flex-1 overflow-y-auto py-1">
+        @for (sprint of sprints(); track sprint; let i = $index) {
+          @if (renamingSprintOld() === sprint) {
+            <!-- Rename inline -->
+            <div class="flex items-center gap-1 px-2 py-1">
+              <input type="text"
+                [ngModel]="renamingSprintNew()" (ngModelChange)="renamingSprintNew.set($event)"
+                (keydown.enter)="confirmRenameSprint()"
+                (keydown.escape)="cancelRenameSprint()"
+                class="flex-1 bg-gray-800 border border-indigo-500 text-white text-xs rounded px-2 py-1
+                       focus:outline-none min-w-0" autofocus />
+              <button (click)="confirmRenameSprint()" class="text-emerald-400 hover:text-emerald-300"><svg lucideCheck class="w-3.5 h-3.5"></svg></button>
+              <button (click)="cancelRenameSprint()" class="text-gray-600 hover:text-gray-400"><svg lucideX class="w-3.5 h-3.5"></svg></button>
+            </div>
+          } @else {
+            <button (click)="selectedSprint.set(sprint)"
+              class="w-full flex items-center justify-between gap-1 px-3 py-2 text-xs transition-colors group
+                     {{ selectedSprint() === sprint
+                        ? 'bg-indigo-600/20 text-indigo-300'
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' }}">
+              <span class="truncate">{{ sprint }}</span>
+              <span class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 shrink-0">
+                <button (click)="$event.stopPropagation(); moveSprint(sprint, 'up')"
+                  [disabled]="i === 0"
+                  class="hover:text-white disabled:opacity-30 px-0.5"><svg lucideArrowUp class="w-3 h-3"></svg></button>
+                <button (click)="$event.stopPropagation(); moveSprint(sprint, 'down')"
+                  [disabled]="i === sprints().length - 1"
+                  class="hover:text-white disabled:opacity-30 px-0.5"><svg lucideArrowDown class="w-3 h-3"></svg></button>
+                <button (click)="$event.stopPropagation(); startRenameSprint(sprint)"
+                  class="hover:text-indigo-300 px-0.5"><svg lucidePencil class="w-3 h-3"></svg></button>
+                <button (click)="$event.stopPropagation(); removeSprint(sprint)"
+                  class="hover:text-red-400 px-0.5"><svg lucideX class="w-3 h-3"></svg></button>
+              </span>
+            </button>
+          }
+        }
+        @if (!sprints().length) {
+          <p class="text-gray-700 text-xs px-3 py-3 italic">Nenhuma sprint criada</p>
+        }
+      </div>
+      <!-- Importar milestones do GitLab -->
+      @if (importableMilestones().length) {
+        <div class="border-t border-gray-800 px-2 py-1.5 shrink-0">
+          <button (click)="importMilestones()"
+            class="w-full flex items-center justify-center gap-1.5 text-xs px-2 py-1.5
+                   bg-indigo-900/30 hover:bg-indigo-900/50 border border-indigo-700/30
+                   text-indigo-300 rounded transition-colors">
+            <svg lucideDownload class="w-3.5 h-3.5"></svg> Importar milestones GitLab ({{ importableMilestones().length }})
+          </button>
+        </div>
+      }
+      <!-- Add sprint -->
+      <div class="border-t border-gray-800 p-2 shrink-0">
+        <div class="flex gap-1">
+          <input type="text"
+            [ngModel]="newSprintName()" (ngModelChange)="newSprintName.set($event)"
+            (keydown)="onSprintKeydown($event)"
+            placeholder="Ex: Sprint MGAPP-001"
+            class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1.5
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition min-w-0" />
+          <button (click)="addSprint()" [disabled]="!newSprintName().trim()"
+            class="px-2 py-1.5 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-40
+                   text-white text-xs rounded transition-colors font-bold">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues column -->
+    <div class="flex flex-col w-[calc(50%-6.5rem)] border-r border-gray-800 overflow-hidden">
+      <div class="px-3 py-2 border-b border-gray-800 shrink-0">
+        <input type="text" #issueFilterInput
+          [ngModel]="issueFilter()" (ngModelChange)="issueFilter.set($event)"
+          placeholder="Filtrar cards... (/)"
+          class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
+                 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+      </div>
+      <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+        @if (!issues().length) {
+          <div class="flex flex-col items-center justify-center py-12 text-center px-4">
+            <p class="text-gray-600 text-xs">Nenhum card carregado.</p>
+            <p class="text-gray-700 text-xs mt-0.5">Acesse Sincronizar primeiro.</p>
+          </div>
+        }
+        @for (issue of filteredIssues(); track issue.id) {
+          <button (click)="selectIssue(issue)"
+            class="w-full text-left px-3 py-2 rounded-lg border transition-all
+                   {{ selectedIssue()?.iid === issue.iid
+                      ? 'bg-indigo-600/20 border-indigo-500 ring-1 ring-indigo-500/50'
+                      : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600' }}">
+            <div class="flex items-start gap-1.5">
+              <span class="text-indigo-400 font-mono text-xs shrink-0 mt-0.5">#{{ issue.iid }}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-xs leading-snug line-clamp-2">{{ issue.title }}</p>
+                <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                  @if (isIssueLinked(issue.iid)) {
+                    <span class="flex items-center gap-0.5 text-xs text-emerald-400">
+                      <svg lucideGitBranch class="w-3 h-3"></svg> {{ linkedBranchesFor(issue.iid).length }}
+                    </span>
+                    @if (sprintOfIssue(issue.iid)) {
+                      <span class="text-xs text-indigo-400 bg-indigo-900/30 px-1.5 rounded">
+                        {{ sprintOfIssue(issue.iid) }}
+                      </span>
+                    }
+                  }
+                  @if (issue.milestone) {
+                    <span class="flex items-center gap-0.5 text-[10px] text-purple-400 bg-purple-900/20 px-1 rounded leading-tight">
+                      <svg lucideTarget class="w-2.5 h-2.5"></svg> {{ issue.milestone.title }}
+                    </span>
+                  }
+                </div>
+              </div>
+              @if (isIssueLinked(issue.iid)) {
+                <svg lucideCheck class="w-3.5 h-3.5 text-emerald-500 shrink-0"></svg>
+              }
+            </div>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Branches column -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+      <div class="px-3 py-2 border-b border-gray-800 shrink-0">
+        @if (selectedIssue()) {
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs text-gray-500 shrink-0">Sprint:</span>
+            <select [ngModel]="selectedSprint()" (ngModelChange)="selectedSprint.set($event)"
+              class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1
+                     focus:outline-none focus:border-indigo-500 transition">
+              <option value="">— Sem sprint —</option>
+              @for (s of sprints(); track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
+        }
+        <input type="text"
+          [ngModel]="branchFilter()" (ngModelChange)="branchFilter.set($event)"
+          placeholder="Filtrar branches..."
+          class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
+                 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+      </div>
+      @if (!selectedIssue()) {
+        <div class="flex flex-col items-center justify-center flex-1 text-center px-6">
+          <p class="text-gray-600 text-xs">Selecione um card ao lado</p>
+          <p class="text-gray-700 text-xs mt-0.5">para vincular branches</p>
+        </div>
+      } @else {
+        <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+          @if (!branches().length) {
+            <div class="text-center py-8 text-gray-600 text-xs">
+              Nenhuma branch. Acesse Sincronizar primeiro.
+            </div>
+          }
+          @for (branch of filteredBranches(); track branch.name) {
+            <button (click)="toggleBranch(branch.name)"
+              class="w-full text-left px-3 py-2 rounded-lg border transition-all flex items-center gap-2
+                     {{ isBranchSelected(branch.name)
+                        ? 'bg-emerald-600/20 border-emerald-500 ring-1 ring-emerald-500/50'
+                        : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600' }}">
+              <div class="w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center
+                          {{ isBranchSelected(branch.name)
+                             ? 'bg-emerald-500 border-emerald-500'
+                             : 'border-gray-600' }}">
+                @if (isBranchSelected(branch.name)) {
+                  <svg lucideCheck class="w-2.5 h-2.5 text-white"></svg>
+                }
+              </div>
+              <svg lucideGitBranch class="w-3 h-3 text-emerald-400 shrink-0"></svg>
+              <span class="text-white text-xs font-mono truncate flex-1">{{ branch.name }}</span>
+              @if (branch.merged) {
+                <span class="text-purple-400 text-xs shrink-0">merged</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- Vínculos salvos (por sprint) -->
+  @if (links().length) {
+    <div class="border-t border-gray-800 shrink-0 flex flex-col" style="max-height: 300px">
+      <!-- Header com filtros -->
+      <div class="flex items-center gap-3 px-8 py-2 border-b border-gray-800/60 bg-gray-950 shrink-0 flex-wrap">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Vínculos salvos</span>
+        <span class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full">
+          {{ filteredLinksCount() }}/{{ links().length }}
+        </span>
+        <div class="flex-1"></div>
+        <!-- Filtro sprint -->
+        <select [ngModel]="viewSprintFilter()" (ngModelChange)="viewSprintFilter.set($event)"
+          class="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1
+                 focus:outline-none focus:border-indigo-500 transition max-w-[140px]">
+          <option value="">Todas as sprints</option>
+          @for (s of sprints(); track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+        <!-- Busca livre -->
+        <input type="text"
+          [ngModel]="viewSearchFilter()" (ngModelChange)="viewSearchFilter.set($event)"
+          placeholder="Buscar card, branch..."
+          class="bg-gray-800 border border-gray-700 text-white text-xs rounded px-2.5 py-1
+                 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition w-36" />
+      </div>
+      <!-- Tabela -->
+      <div class="overflow-y-auto flex-1">
+        @if (!filteredLinksCount()) {
+          <div class="text-center py-5 text-gray-600 text-xs">Nenhum vínculo corresponde aos filtros.</div>
+        }
+        @for (group of filteredGroupedLinks(); track group.sprint) {
+          <!-- Sprint header -->
+          <div class="flex items-center gap-2 px-8 py-1.5 bg-gray-900/60 border-b border-gray-800/40">
+            @if (group.sprint) {
+              <span class="text-xs font-medium text-indigo-300 bg-indigo-900/30 px-2 py-0.5 rounded">
+                {{ group.sprint }}
+              </span>
+            } @else {
+              <span class="text-xs text-gray-600 italic">Sem sprint</span>
+            }
+            <span class="text-xs text-gray-700">{{ group.links.length }} vínculo(s)</span>
+          </div>
+          <!-- Links in sprint -->
+          @for (link of group.links; track link.issueIid) {
+            @let liveIssue = issueByIid().get(link.issueIid);
+            <div class="flex items-start gap-4 px-8 py-2 border-b border-gray-800/30
+                        hover:bg-gray-800/20 transition-colors">
+              <div class="shrink-0 w-32">
+                <span class="text-indigo-400 font-mono text-xs">#{{ link.issueIid }}</span>
+                <p class="text-gray-400 text-xs leading-snug mt-0.5 truncate" [title]="link.issueTitle">
+                  {{ link.issueTitle }}
+                </p>
+                @if (liveIssue?.milestone) {
+                  <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                    <span class="flex items-center gap-0.5 text-[10px] text-purple-400 bg-purple-900/20 px-1 py-0.5 rounded leading-tight"
+                          [title]="liveIssue!.milestone!.due_date ? 'Prazo: ' + formatDueDate(liveIssue!.milestone!.due_date!) : liveIssue!.milestone!.title">
+                      <svg lucideTarget class="w-2.5 h-2.5"></svg> {{ liveIssue!.milestone!.title }}
+                    </span>
+                    @if (liveIssue!.milestone!.due_date) {
+                      <span class="text-[10px] text-gray-600">{{ formatDueDate(liveIssue!.milestone!.due_date!) }}</span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="flex-1 flex flex-wrap gap-1">
+                @for (b of link.branchNames; track b) {
+                  <span class="flex items-center gap-1 bg-gray-800 border border-gray-700 rounded
+                               px-2 py-0.5 text-xs font-mono text-emerald-300">
+                    <svg lucideGitBranch class="w-3 h-3"></svg> {{ b }}
+                    <button (click)="removeBranch(link.issueIid, b)"
+                      class="text-gray-600 hover:text-red-400 ml-0.5 transition"><svg lucideX class="w-3 h-3"></svg></button>
+                  </span>
+                }
+              </div>
+              <!-- Move to sprint -->
+              <select [ngModel]="link.sprintName" (ngModelChange)="moveLink(link.issueIid, $event)"
+                class="bg-gray-800 border border-gray-700/50 text-gray-400 text-xs rounded px-1.5 py-0.5
+                       focus:outline-none focus:border-indigo-500 transition shrink-0 max-w-[120px]">
+                <option value="">Sem sprint</option>
+                @for (s of sprints(); track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+              <button (click)="removeLink(link.issueIid)"
+                class="text-gray-600 hover:text-red-400 transition shrink-0" title="Remover"><svg lucideTrash2 class="w-3.5 h-3.5"></svg></button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+</div>

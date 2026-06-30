@@ -1,0 +1,402 @@
+<div class="flex flex-col h-full">
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center justify-between px-8 py-4 border-b border-gray-800 shrink-0">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Sincronizar</h2>
+      <p class="text-gray-500 text-xs mt-0.5">Busca Issues e Branches do GitLab</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button (click)="filtersOpen.set(!filtersOpen())"
+        class="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors
+               {{ filtersOpen()
+                  ? 'bg-gray-800 border-gray-600 text-white'
+                  : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600' }}">
+        Filtros
+        @if (assigneeFilter().trim()) {
+          <span class="text-[10px] bg-indigo-600/30 text-indigo-300 px-1.5 py-0.5 rounded-full leading-none">1</span>
+        }
+        <svg lucideChevronDown class="w-3.5 h-3.5 text-gray-600 transition-transform {{ filtersOpen() ? 'rotate-180' : '' }}"></svg>
+      </button>
+      <button
+        (click)="fetchAll()"
+        [disabled]="loadingIssues() || loadingBranches()"
+        class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500
+               disabled:opacity-60 text-white text-sm font-medium rounded-lg transition-colors"
+      >
+        @if (loadingIssues() || loadingBranches()) {
+          <svg lucideLoaderCircle class="w-4 h-4 animate-spin"></svg> Buscando...
+        } @else {
+          <svg lucideRefreshCw class="w-4 h-4"></svg> Buscar tudo
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Painel colapsável: assignee + presets -->
+  @if (filtersOpen()) {
+    <div class="flex items-center gap-1.5 flex-wrap px-8 py-2.5 border-b border-gray-800/60 bg-gray-900/30 shrink-0">
+      <div class="flex items-center gap-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <input
+          type="text" #assigneeFilterInput
+          [ngModel]="assigneeFilter()" (ngModelChange)="assigneeFilter.set($event)"
+          placeholder="Assignee... (/)"
+          class="bg-transparent text-white text-sm px-3 py-2 w-36
+                 placeholder-gray-600 focus:outline-none transition"
+        />
+        @if (assigneeFilter().trim() && !savedAssignees().includes(assigneeFilter().trim())) {
+          <button (click)="saveAssigneePreset()" title="Salvar como preset"
+            class="text-gray-600 hover:text-indigo-400 text-xs px-2 transition border-l border-gray-700">
+            +
+          </button>
+        }
+        @if (assigneeFilter()) {
+          <button (click)="assigneeFilter.set('')"
+            class="text-gray-600 hover:text-red-400 px-2 transition border-l border-gray-700">
+            <svg lucideX class="w-3 h-3"></svg>
+          </button>
+        }
+      </div>
+      <!-- Minha conta -->
+      @if (myUsername() && !myUsernameSaved()) {
+        <button (click)="saveMyAccount()" title="Adicionar minha conta aos presets"
+          class="text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-gray-600
+                 text-gray-500 hover:border-indigo-500 hover:text-indigo-400 transition">
+          + Minha conta
+        </button>
+      }
+      <!-- Chips de presets salvos -->
+      @for (preset of savedAssignees(); track preset) {
+        <div class="flex items-center gap-0 rounded-full overflow-hidden border
+                    {{ assigneeFilter() === preset
+                       ? 'border-indigo-500 bg-indigo-600/20'
+                       : 'border-gray-700 bg-gray-800 hover:border-gray-600' }}">
+          <button (click)="applyAssigneePreset(preset)"
+            class="text-xs px-2.5 py-1 transition
+                   {{ assigneeFilter() === preset ? 'text-indigo-300' : 'text-gray-400 hover:text-white' }}">
+            @if (preset === myUsername()) { <svg lucideStar class="w-3 h-3 text-indigo-400 mr-0.5 inline fill-current"></svg> }
+            {{ preset }}
+          </button>
+          <button (click)="removeAssigneePreset(preset)"
+            class="text-gray-600 hover:text-red-400 px-1.5 transition border-l border-gray-700/50">
+            <svg lucideX class="w-2.5 h-2.5"></svg>
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Filtros globais de Issues -->
+  <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-8 py-2.5 border-b border-gray-800/60 bg-gray-900/30 shrink-0">
+    <!-- Estado -->
+    <div class="flex items-center gap-1.5">
+      <span class="text-xs text-gray-600 shrink-0">Estado:</span>
+      @for (s of issueStates; track s) {
+        <button (click)="issueState.set(s)"
+          class="text-xs px-2.5 py-1 rounded-full border transition-all
+                 {{ issueState() === s
+                    ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300'
+                    : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400' }}">
+          {{ stateLabel(s) }}
+        </button>
+      }
+    </div>
+    <!-- Labels/colunas (OR) -->
+    @if (configLabels().length) {
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-xs text-gray-600 shrink-0">Colunas:</span>
+        @for (label of configLabels(); track label) {
+          <button (click)="toggleLabel(label)"
+            class="text-xs px-2.5 py-1 rounded-full border transition-all
+                   {{ activeLabels().includes(label)
+                      ? 'bg-indigo-900/40 border-indigo-500/40 text-indigo-300'
+                      : 'bg-transparent border-gray-700 text-gray-600 line-through hover:border-gray-500' }}">
+            {{ label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Duas colunas -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Issues -->
+    <div class="flex flex-col w-1/2 border-r border-gray-800 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-2.5 border-b border-gray-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-gray-300">Cards (Issues)</span>
+          @if (issues().length) {
+            <span class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full">
+              {{ issues().length }}
+            </span>
+          }
+        </div>
+        <button (click)="fetchIssues()" [disabled]="loadingIssues()"
+          class="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50 transition">
+          @if (loadingIssues()) {
+            <svg lucideLoaderCircle class="w-3 h-3 animate-spin"></svg> Buscando...
+          } @else {
+            <svg lucideRefreshCw class="w-3 h-3"></svg> Atualizar
+          }
+        </button>
+      </div>
+
+      <!-- Contexto da última busca -->
+      @if (lastIssuesFetch(); as ctx) {
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-1.5 bg-gray-800/30 border-b border-gray-800/40 shrink-0 text-xs">
+          <span class="text-gray-600 font-mono truncate max-w-[180px]" [title]="ctx.project">{{ ctx.project }}</span>
+          @if (ctx.assignee) {
+            <span class="text-indigo-300 font-mono">&#64;{{ ctx.assignee }}</span>
+          }
+          <span class="text-gray-600 px-1.5 py-0.5 bg-gray-800 rounded">{{ stateLabel(ctx.state) }}</span>
+          @for (label of ctx.labels; track label) {
+            <span class="bg-indigo-900/30 border border-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full">
+              {{ label }}
+            </span>
+          }
+          @if (!ctx.labels.length) {
+            <span class="text-gray-700 italic">todas as colunas</span>
+          }
+        </div>
+      }
+
+      <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        @if (loadingIssues()) {
+          @for (_ of [1,2,3,4,5]; track $index) {
+            <div class="animate-pulse bg-gray-800 rounded-lg h-16"></div>
+          }
+        } @else if (errorIssues()) {
+          <div class="flex items-start gap-2 text-red-400 text-sm p-3 bg-red-900/20 rounded-lg">
+            <svg lucideTriangleAlert class="w-4 h-4 shrink-0 mt-0.5"></svg> {{ errorIssues() }}
+          </div>
+        } @else if (!issues().length) {
+          <div class="text-center text-gray-600 text-sm py-12">
+            Clique em "Buscar tudo" para carregar os cards
+          </div>
+        } @else {
+          @for (issue of issues(); track issue.id) {
+            <div class="group bg-gray-800/60 hover:bg-gray-800 border border-gray-700/50
+                        hover:border-gray-600 rounded-lg px-4 py-3 transition-colors">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-indigo-400 text-xs font-mono">#{{ issue.iid }}</span>
+                    @if (issueStateBadge(issue)) {
+                      <span class="text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded-full">
+                        {{ issueStateBadge(issue) }}
+                      </span>
+                    }
+                    @if (issue.milestone) {
+                      <span class="flex items-center gap-1 text-xs bg-purple-900/40 text-purple-300 border border-purple-700/30 px-1.5 py-0.5 rounded-full"
+                            [title]="issue.milestone.due_date ? 'Vence: ' + formatDueDate(issue.milestone.due_date) : ''">
+                        <svg lucideTarget class="w-3 h-3"></svg> {{ issue.milestone.title }}
+                        @if (issue.milestone.due_date) {
+                          <span class="text-purple-500"> · {{ formatDueDate(issue.milestone.due_date) }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                  <p class="text-white text-sm leading-snug mt-0.5">{{ issue.title }}</p>
+                  @if (issue.assignee) {
+                    <span class="text-xs text-gray-500 mt-1 block">&#64;{{ issue.assignee.username }}</span>
+                  }
+                </div>
+                <button (click)="openInBrowser(issueUrl(issue))"
+                   class="text-gray-600 hover:text-indigo-400 shrink-0 opacity-0 group-hover:opacity-100 transition"
+                   title="Abrir no navegador">
+                  <svg lucideExternalLink class="w-3.5 h-3.5"></svg>
+                </button>
+              </div>
+              @if (issue.labels.length) {
+                <div class="flex flex-wrap gap-1 mt-1.5">
+                  @for (label of issue.labels; track label) {
+                    <span class="text-xs bg-gray-700/60 text-gray-400 px-1.5 py-0.5 rounded">{{ label }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Branches (por projeto) -->
+    <div class="flex flex-col w-1/2 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-2.5 border-b border-gray-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-medium text-gray-300">Branches</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Filtros globais -->
+          <input type="text"
+            [ngModel]="branchNameFilter()" (ngModelChange)="branchNameFilter.set($event)"
+            placeholder="Filtrar..."
+            class="bg-gray-800 border border-gray-700 text-white text-xs rounded px-2.5 py-1 w-28
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+          <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none">
+            <input type="checkbox"
+              [ngModel]="hideMerged()" (ngModelChange)="hideMerged.set($event)"
+              class="accent-indigo-500 w-3 h-3" />
+            Ocultar merged
+          </label>
+          <button (click)="fetchBranches()" [disabled]="loadingBranches()"
+            class="text-indigo-400 hover:text-indigo-300 disabled:opacity-50 transition shrink-0">
+            @if (loadingBranches()) {
+              <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg>
+            } @else {
+              <svg lucideRefreshCw class="w-3.5 h-3.5"></svg>
+            }
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+        @if (loadingBranches()) {
+          <div class="px-4 py-3 space-y-2">
+            @for (_ of [1,2,3,4,5]; track $index) {
+              <div class="animate-pulse bg-gray-800 rounded-lg h-12"></div>
+            }
+          </div>
+        } @else if (errorBranches()) {
+          <div class="flex items-start gap-2 text-red-400 text-sm p-4 bg-red-900/20 m-4 rounded-lg">
+            <svg lucideTriangleAlert class="w-4 h-4 shrink-0 mt-0.5"></svg> {{ errorBranches() }}
+          </div>
+        } @else if (!enabledProjects().length) {
+          <div class="text-center text-gray-600 text-sm py-12">
+            Configure projetos nas Configurações.
+          </div>
+        } @else {
+          @for (project of enabledProjects(); track project.id) {
+            @let displayed = displayedBranchesFor(project.id);
+            @let all = syncStore.branchesFor(project.id);
+            @let status = projectBranchStatus()[project.id];
+
+            <!-- Cabeçalho da seção do projeto -->
+            <div class="flex items-center justify-between px-4 py-2 bg-gray-800/30 border-b border-gray-800/60 sticky top-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-xs font-semibold text-gray-400 truncate">{{ project.name }}</span>
+                <span class="text-gray-700 font-mono text-[10px] truncate max-w-[140px]">{{ project.codeProjectPath }}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                @if (status === 'loading') {
+                  <svg lucideLoaderCircle class="w-3 h-3 text-gray-600 animate-spin"></svg>
+                } @else if (status === 'error') {
+                  <span class="text-[10px] text-red-500">erro</span>
+                } @else if (all.length) {
+                  <span class="text-[10px] text-gray-600">{{ displayed.length }}/{{ all.length }}</span>
+                }
+              </div>
+            </div>
+
+            @if (!all.length && status !== 'loading') {
+              <div class="flex items-center gap-1 px-4 py-3 text-xs text-gray-700 italic">
+                @if (!status) { Clique em <svg lucideRefreshCw class="w-3 h-3 inline"></svg> para carregar } @else { Sem branches }
+              </div>
+            } @else if (displayed.length === 0 && all.length > 0) {
+              <div class="px-4 py-3 text-xs text-gray-700 italic">Nenhuma branch corresponde ao filtro.</div>
+            } @else {
+              <div class="px-4 py-2 space-y-1.5">
+                @for (branch of displayed; track branch.name) {
+                  <div class="group flex items-center justify-between bg-gray-800/60 hover:bg-gray-800
+                              border border-gray-700/50 hover:border-gray-600 rounded-lg px-3 py-2 transition-colors">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <svg lucideGitBranch class="w-3 h-3 text-emerald-400 shrink-0"></svg>
+                      <span class="text-white text-xs truncate font-mono">{{ branch.name }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                      @if (branch.merged) {
+                        <span class="text-[10px] text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded">merged</span>
+                      }
+                      @if (branchMrMap().get(branch.name); as mr) {
+                        <button (click)="openInBrowser(mr.web_url)"
+                          title="MR !{{ mr.iid }}: {{ mr.title }}"
+                          class="text-[10px] px-1.5 py-0.5 rounded transition-colors
+                                 {{ mr.state === 'merged' ? 'bg-purple-900/40 text-purple-300'
+                                  : mr.draft ? 'bg-gray-700/60 text-gray-500'
+                                  : 'bg-blue-900/40 text-blue-300 hover:bg-blue-800/60' }}">
+                          !{{ mr.iid }}{{ mr.draft ? ' (rascunho)' : '' }}
+                        </button>
+                      }
+                      @if (branch.commit?.author_name) {
+                        <span class="text-[10px] text-gray-600" [title]="branch.commit!.author_name!">
+                          {{ branch.commit!.author_name!.split(' ')[0] }}
+                        </span>
+                      }
+                      @if (branchDate(branch)) {
+                        <span class="text-[10px] text-gray-600">{{ branchDate(branch) }}</span>
+                      }
+                      <button (click)="openInBrowser(branchUrl(branch))"
+                        class="text-gray-600 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition"
+                        title="Abrir no navegador">
+                        <svg lucideExternalLink class="w-3.5 h-3.5"></svg>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Cobertura & Gaps -->
+  @if (issues().length || branches().length) {
+    <div class="border-t border-gray-800 shrink-0">
+      <button (click)="showCoverage.set(!showCoverage())"
+        class="w-full flex items-center gap-4 px-8 py-2 text-xs hover:bg-gray-800/30 transition-colors">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider shrink-0">Cobertura &amp; Gaps</span>
+        @if (coveragePct() !== null) {
+          <span class="bg-indigo-600/20 text-indigo-300 px-2 py-0.5 rounded-full">{{ coveragePct() }}% vinculadas</span>
+        }
+        @if (unlinkedIssues().length) {
+          <span class="bg-amber-600/20 text-amber-300 px-2 py-0.5 rounded-full">{{ unlinkedIssues().length }} sem branch</span>
+        }
+        @if (orphanBranches().length) {
+          <span class="bg-red-600/20 text-red-300 px-2 py-0.5 rounded-full">{{ orphanBranches().length }} branches órfãs</span>
+        }
+        @if (coveragePct() === 100 && !orphanBranches().length) {
+          <span class="flex items-center gap-1 text-emerald-400"><svg lucideCheck class="w-3.5 h-3.5"></svg> Cobertura completa</span>
+        }
+        <svg lucideChevronDown class="w-3.5 h-3.5 ml-auto text-gray-600 transition-transform {{ showCoverage() ? 'rotate-180' : '' }}"></svg>
+      </button>
+      @if (showCoverage()) {
+        <div class="flex gap-8 px-8 py-4 border-t border-gray-800/60 overflow-x-auto">
+          @if (unlinkedIssues().length) {
+            <div class="min-w-[220px]">
+              <p class="text-xs font-semibold text-amber-400 mb-2">Issues sem branch ({{ unlinkedIssues().length }})</p>
+              <div class="space-y-1 max-h-36 overflow-y-auto">
+                @for (issue of unlinkedIssues(); track issue.id) {
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="text-indigo-400 font-mono shrink-0">#{{ issue.iid }}</span>
+                    <span class="text-gray-400 truncate" [title]="issue.title">{{ issue.title }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (orphanBranches().length) {
+            <div class="min-w-[220px]">
+              <p class="text-xs font-semibold text-red-400 mb-2">Branches sem issue ({{ orphanBranches().length }})</p>
+              <div class="space-y-1 max-h-36 overflow-y-auto">
+                @for (b of orphanBranches(); track b.name) {
+                  <div class="flex items-center gap-2 text-xs">
+                    <svg lucideGitBranch class="w-3 h-3 text-emerald-400 shrink-0"></svg>
+                    <span class="text-gray-500 font-mono truncate" [title]="b.name">{{ b.name }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (!unlinkedIssues().length && !orphanBranches().length) {
+            <p class="text-xs text-emerald-400 py-1">Todos os cards têm branch e todas as branches ativas estão rastreadas.</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
+</div>

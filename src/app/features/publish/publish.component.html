@@ -1,0 +1,180 @@
+<div class="flex flex-col h-full overflow-hidden">
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center justify-between px-8 py-5 border-b border-gray-800 shrink-0">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Publicar</h2>
+      <p class="text-gray-500 text-xs mt-0.5">Gera e envia relatórios Markdown para o Wiki do GitLab</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button
+        (click)="publishAll()"
+        [disabled]="publishingAll() || !enabledProjects().length"
+        class="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500
+               disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+        @if (publishingAll()) {
+          <svg lucideLoaderCircle class="w-4 h-4 animate-spin"></svg> Publicando...
+        } @else {
+          <svg lucideUpload class="w-4 h-4"></svg> Publicar Tudo
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Corpo -->
+  <div class="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+
+    <!-- Sem projetos configurados -->
+    @if (!enabledProjects().length) {
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <svg lucideFileText class="w-9 h-9 text-gray-700 mb-3"></svg>
+        <p class="text-gray-400 text-sm">Nenhum projeto ativo configurado.</p>
+        <p class="text-gray-600 text-xs mt-1">
+          Acesse <strong class="text-gray-500">Configurações → Projetos</strong> para adicionar.
+        </p>
+      </div>
+    }
+
+    @for (project of enabledProjects(); track project.id) {
+      <div class="space-y-3">
+        <!-- Cabeçalho do projeto -->
+        <div class="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+          <svg lucideFolderOpen class="w-3.5 h-3.5"></svg>
+          <span>{{ project.name }}</span>
+          <span class="text-gray-700 font-mono font-normal normal-case">{{ project.codeProjectPath }}</span>
+        </div>
+
+        @for (kind of kinds; track kind) {
+          @let st = statusOf(project.id, kind);
+          @let isLoading = st.state === 'loading' || publishingAll();
+          @let count = itemCount(project.id, kind);
+          @let previewOpen = previewOpenKey(project.id, kind);
+
+          <div class="bg-gray-900 border rounded-xl overflow-hidden transition-all
+                      {{ st.state === 'success' ? 'border-emerald-700/50' :
+                         st.state === 'error'   ? 'border-red-700/40' :
+                                                  'border-gray-800' }}">
+
+            <!-- Card header -->
+            <div class="flex items-center gap-4 px-6 py-4">
+              <div class="shrink-0">
+                @if (kind === 'links') { <svg lucideLink2 class="w-5 h-5 text-indigo-400"></svg> }
+                @else { <svg lucideBug class="w-5 h-5 text-yellow-400"></svg> }
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-white font-medium text-sm">{{ kindLabel(kind) }}</span>
+                  <span class="text-xs bg-gray-800 border border-gray-700 text-gray-400
+                               px-2 py-0.5 rounded font-mono">
+                    {{ kind === 'links' ? project.linksSlug : project.errorsSlug }}
+                  </span>
+                  @if (project.wikiProjectPath !== project.codeProjectPath) {
+                    <span class="text-xs text-gray-600 font-mono">→ {{ project.wikiProjectPath }}</span>
+                  }
+                </div>
+                <!-- Contagens -->
+                <div class="flex items-center gap-4 mt-1.5">
+                  @if (kind === 'links') {
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="text-indigo-400 font-medium">{{ count }}</span> vínculo(s)
+                    </span>
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="text-indigo-400 font-medium">{{ sprintsCount() }}</span> sprint(s)
+                    </span>
+                  } @else {
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="text-yellow-400 font-medium">{{ count }}</span> erro(s)
+                    </span>
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span class="text-purple-400 font-medium">{{ groupsCount() }}</span> divisão(ões)
+                    </span>
+                  }
+                  @if (!count) {
+                    <span class="text-xs text-orange-400 bg-orange-900/20 border border-orange-700/30
+                                 px-2 py-0.5 rounded">Nenhum item</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Status + ações -->
+              <div class="flex items-center gap-3 shrink-0">
+                @if (st.state === 'success') {
+                  <div class="text-right">
+                    <span class="flex items-center gap-1 text-xs text-emerald-400"><svg lucideCheck class="w-3.5 h-3.5"></svg> Publicado</span>
+                    @if (st.publishedAt) {
+                      <div class="text-xs text-gray-600 mt-0.5">{{ formatDate(st.publishedAt) }}</div>
+                    }
+                  </div>
+                } @else if (st.state === 'error') {
+                  <span class="flex items-center gap-1 text-xs text-red-400 max-w-[200px] truncate" [title]="st.message">
+                    <svg lucideTriangleAlert class="w-3.5 h-3.5 shrink-0"></svg> {{ st.message }}
+                  </span>
+                } @else if (st.state === 'loading') {
+                  <span class="text-xs text-gray-500 flex items-center gap-1">
+                    <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> Publicando...
+                  </span>
+                }
+
+                <button (click)="togglePreview(project.id, kind)"
+                  class="text-xs text-gray-500 hover:text-gray-300 transition px-2 py-1.5
+                         bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">
+                  {{ previewOpen ? 'Fechar preview' : 'Ver preview' }}
+                </button>
+
+                <button
+                  (click)="publishOne(project, kind)"
+                  [disabled]="isLoading"
+                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                         disabled:opacity-50
+                         {{ st.state === 'success'
+                            ? 'bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-300 border border-emerald-700/40'
+                            : 'bg-gray-700 hover:bg-gray-600 text-white' }}">
+                  @if (st.state === 'loading') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> }
+                  @else if (st.state === 'success') { <svg lucideUpload class="w-3.5 h-3.5"></svg> Republicar }
+                  @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> Publicar }
+                </button>
+              </div>
+            </div>
+
+            <!-- Preview markdown -->
+            @if (previewOpen) {
+              <div class="border-t border-gray-800">
+                <div class="flex items-center justify-between px-6 py-2 bg-gray-950/60">
+                  <span class="text-xs text-gray-500 font-mono">Preview — Markdown gerado</span>
+                  <span class="text-xs text-gray-700">
+                    {{ preview().split('\n').length }} linhas
+                  </span>
+                </div>
+                <pre class="overflow-auto px-6 py-4 text-xs text-gray-300 font-mono leading-relaxed
+                            bg-gray-950/40 max-h-72"
+                     style="white-space: pre-wrap; word-break: break-word;">{{ preview() }}</pre>
+              </div>
+            }
+
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Aviso sobre merge -->
+    @if (enabledProjects().length) {
+      <div class="flex items-start gap-3 p-4 bg-gray-900/60 border border-gray-800 rounded-xl text-xs text-gray-500">
+        <svg lucideInfo class="w-4 h-4 shrink-0 mt-0.5"></svg>
+        <div class="space-y-1">
+          <p>
+            O publicar sempre mescla o Wiki atual com os dados locais antes de subir,
+            garantindo que publicações de outros membros da equipe não sejam sobrescritas.
+          </p>
+          <p>
+            O formato publicado inclui um bloco de dados embutido que permite reimportar o
+            estado a partir do Wiki em qualquer máquina via
+            <strong class="text-gray-400">Vínculos → Importar Wiki</strong> ou
+            <strong class="text-gray-400">Erros → Importar Wiki</strong>.
+          </p>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

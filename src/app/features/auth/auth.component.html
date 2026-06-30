@@ -1,0 +1,74 @@
+<div class="flex items-center justify-center min-h-screen bg-gray-950">
+  <div class="w-full max-w-md px-8 py-10 bg-gray-900 rounded-2xl shadow-2xl border border-gray-800">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="text-5xl mb-3">⬡</div>
+      <h1 class="text-2xl font-bold text-white">Nexus Git</h1>
+      <p class="text-gray-400 text-sm mt-1">Rastreabilidade Issues × Branches</p>
+    </div>
+
+    <!-- Formulário -->
+    <div class="space-y-4">
+
+      <!-- URL do GitLab (editável) -->
+      <div>
+        <label class="block text-sm text-gray-300 mb-1.5">Instância GitLab</label>
+        <input
+          type="url"
+          [ngModel]="gitlabUrl()" (ngModelChange)="gitlabUrl.set($event)"
+          placeholder="https://gitlab.com"
+          class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm placeholder-gray-600
+                 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+        />
+      </div>
+
+      <!-- Token -->
+      <div>
+        <label class="block text-sm text-gray-300 mb-1.5">Personal Access Token</label>
+        <div class="relative">
+          <input
+            [type]="showToken() ? 'text' : 'password'"
+            [ngModel]="token()" (ngModelChange)="token.set($event)"
+            placeholder="glpat-xxxxxxxxxxxxxxxxxxxx"
+            (keydown.enter)="login()"
+            class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 text-sm placeholder-gray-600
+                   focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition pr-10"
+          />
+          <button
+            type="button"
+            (click)="showToken.set(!showToken())"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs transition"
+          >
+            {{ showToken() ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-1.5">
+          Escopos necessários: <code class="text-indigo-400">api</code>
+        </p>
+      </div>
+
+      @if (error()) {
+        <div class="px-3 py-2.5 bg-red-900/40 border border-red-700/50 rounded-lg text-red-300 text-sm">
+          ⚠️ {{ error() }}
+        </div>
+      }
+
+      <button
+        (click)="login()"
+        [disabled]="loading()"
+        class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed
+               text-white font-medium py-3 rounded-lg text-sm transition-colors"
+      >
+        @if (loading()) {
+          <span class="inline-block animate-spin mr-2">⟳</span> Conectando...
+        } @else {
+          Entrar
+        }
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-gray-600 mt-6">
+      Token salvo no Windows Credential Manager · sem envio para servidores externos
+    </p>
+  </div>
+</div>

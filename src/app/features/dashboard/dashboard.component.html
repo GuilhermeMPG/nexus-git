@@ -1,0 +1,171 @@
+<div class="flex flex-col h-full overflow-y-auto px-8 py-6 space-y-6">
+
+  <!-- Título -->
+  <div>
+    <h2 class="text-lg font-semibold text-white">Dashboard</h2>
+    <p class="text-gray-500 text-xs mt-0.5">
+      Visão geral de rastreabilidade e erros
+      @if (enabledProjects().length > 1) {
+        <span class="text-gray-600"> — dados agregados de {{ enabledProjects().length }} projetos habilitados</span>
+      }
+    </p>
+  </div>
+
+  @if (loading()) {
+    <div class="grid grid-cols-3 gap-4">
+      @for (_ of [1,2,3]; track $index) {
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <div class="animate-pulse space-y-3">
+            <div class="h-3 w-20 bg-gray-800 rounded"></div>
+            <div class="h-8 w-16 bg-gray-800 rounded"></div>
+            <div class="h-1.5 w-full bg-gray-800 rounded-full"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (!hasSyncData() && !links().length && !errors().length) {
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <svg lucideInbox class="w-9 h-9 text-gray-700 mb-3"></svg>
+      <p class="text-gray-500 text-sm">Sem dados ainda.</p>
+      <p class="text-gray-600 text-xs mt-1">Acesse <strong class="text-gray-500">Sincronizar</strong> para carregar issues e branches, e <strong class="text-gray-500">Vínculos</strong> para associá-las.</p>
+    </div>
+  } @else {
+
+    <!-- Cards de métrica -->
+    <div class="grid grid-cols-3 gap-4">
+
+      <!-- Issues -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Issues</p>
+        @if (issues().length) {
+          <div class="flex items-end gap-2">
+            <span class="text-3xl font-bold text-white">{{ issueCovPct() }}%</span>
+            <span class="text-sm text-gray-500 mb-1">vinculadas</span>
+          </div>
+          <div class="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-indigo-500 rounded-full transition-all"
+                 [style.width]="(issueCovPct() ?? 0) + '%'"></div>
+          </div>
+          <div class="flex justify-between mt-2 text-xs text-gray-600">
+            <span>{{ issues().length - unlinkedIssues().length }} vinculadas</span>
+            <span>{{ unlinkedIssues().length }} sem branch</span>
+          </div>
+        } @else {
+          <p class="text-sm text-gray-600">Sem dados — sincronize primeiro</p>
+        }
+      </div>
+
+      <!-- Branches -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Branches</p>
+        @if (allBranchesFlat().length) {
+          <div class="flex items-end gap-2">
+            <span class="text-3xl font-bold text-white">{{ branchCovPct() }}%</span>
+            <span class="text-sm text-gray-500 mb-1">rastreadas</span>
+          </div>
+          <div class="mt-2 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500 rounded-full transition-all"
+                 [style.width]="(branchCovPct() ?? 0) + '%'"></div>
+          </div>
+          <div class="flex justify-between mt-2 text-xs text-gray-600">
+            <span>{{ linkedBranchCount() }} rastreadas</span>
+            <span>{{ orphanBranches().length }} órfãs</span>
+          </div>
+        } @else {
+          <p class="text-sm text-gray-600">Sem dados — sincronize primeiro</p>
+        }
+      </div>
+
+      <!-- Erros -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Erros</p>
+        @if (errorStats().total) {
+          <span class="text-3xl font-bold text-white">{{ errorStats().total }}</span>
+          <div class="flex gap-3 mt-3 text-xs">
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-yellow-500 shrink-0"></span>
+              <span class="text-gray-400">{{ errorStats().pending }} pend.</span>
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-gray-500 shrink-0"></span>
+              <span class="text-gray-400">{{ errorStats().fp }} F.P.</span>
+            </span>
+            <span class="flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+              <span class="text-gray-400">{{ errorStats().resolved }} resol.</span>
+            </span>
+          </div>
+        } @else {
+          <p class="text-sm text-gray-600 mt-2">Nenhum erro registrado</p>
+        }
+      </div>
+    </div>
+
+    <!-- Por sprint -->
+    @if (sprintStats().length) {
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Vínculos por sprint</p>
+        <div class="space-y-2">
+          @for (row of sprintStats(); track row.label) {
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-gray-300 w-48 truncate shrink-0" [title]="row.label">
+                {{ row.label }}
+              </span>
+              <div class="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div class="h-full bg-indigo-500/70 rounded-full"
+                     [style.width]="links().length ? (row.count / links().length * 100) + '%' : '0%'"></div>
+              </div>
+              <span class="text-xs text-gray-500 w-16 text-right shrink-0">
+                {{ row.count }} vínculo{{ row.count !== 1 ? 's' : '' }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Issues sem branch -->
+    @if (unlinkedIssues().length) {
+      <div class="bg-gray-900 border border-amber-800/30 rounded-xl p-5">
+        <p class="text-xs text-amber-400 font-semibold uppercase tracking-wider mb-3">
+          Issues sem branch ({{ unlinkedIssues().length }})
+        </p>
+        <div class="space-y-1.5 max-h-48 overflow-y-auto">
+          @for (issue of unlinkedIssues(); track issue.id) {
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-indigo-400 font-mono shrink-0">#{{ issue.iid }}</span>
+              <span class="text-gray-400 truncate">{{ issue.title }}</span>
+              @if (issue.assignee) {
+                <span class="text-gray-600 shrink-0">&#64;{{ issue.assignee.username }}</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Branches órfãs -->
+    @if (orphanBranches().length) {
+      <div class="bg-gray-900 border border-red-800/30 rounded-xl p-5">
+        <p class="text-xs text-red-400 font-semibold uppercase tracking-wider mb-3">
+          Branches sem issue ({{ orphanBranches().length }})
+        </p>
+        <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+          @for (b of orphanBranches(); track b.name) {
+            <span class="flex items-center gap-1 bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs font-mono text-emerald-300">
+              <svg lucideGitBranch class="w-3 h-3"></svg> {{ b.name }}
+            </span>
+          }
+        </div>
+      </div>
+    }
+
+    @if (issueCovPct() === 100 && !orphanBranches().length) {
+      <div class="flex items-center gap-2 text-emerald-400 text-sm">
+        <svg lucideCheck class="w-4 h-4"></svg>
+        <span>Cobertura completa! Todos os cards têm branch e todas as branches activas estão rastreadas.</span>
+      </div>
+    }
+
+  }
+</div>
