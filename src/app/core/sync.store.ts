@@ -1,10 +1,25 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Issue, Branch, Milestone, MergeRequest, ProjectConfig } from '../models';
 import { ConfigService } from './config.service';
 
 @Injectable({ providedIn: 'root' })
 export class SyncStore {
   private configService = inject(ConfigService);
+
+  constructor() {
+    // Mantém `activeProjectId` sempre apontando para um projeto que existe e está habilitado.
+    // Sem isto, o id fica '' (default) ou preso num projeto removido, e só o `activeProject()`
+    // computed disfarça isso caindo em projects[0] — fazendo o id "cru" (usado ao SALVAR um
+    // vínculo) divergir do projeto exibido, o que deixa vínculos aparecendo no projeto errado.
+    effect(() => {
+      const projects = this.enabledProjects();
+      if (!projects.length) return;
+      const current = this.activeProjectId();
+      if (!current || !projects.some(p => p.id === current)) {
+        this.activeProjectId.set(projects[0].id);
+      }
+    });
+  }
 
   readonly issues = signal<Issue[]>([]);
   /** Local, instant tag filter — shared by Sync and Vínculos so both reflect the same selection. */

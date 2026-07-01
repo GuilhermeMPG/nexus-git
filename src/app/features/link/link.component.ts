@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, HostListener, inject, signal, OnInit, ViewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject, signal, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SyncStore } from '../../core/sync.store';
 import { AppStateService } from '../../core/app-state.service';
@@ -44,6 +44,21 @@ export class LinkComponent implements OnInit {
   private isTypingTarget(target: EventTarget | null): boolean {
     const tag = (target as HTMLElement)?.tagName;
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+
+  constructor() {
+    // Ao trocar de projeto, zera qualquer seleção em andamento — uma branch escolhida no
+    // projeto A não deve ficar pendurada ao abrir o projeto B (onde ela nem existe), o que
+    // poderia gerar um vínculo no projeto errado se o usuário clicasse "Vincular" sem perceber.
+    let prev = this.syncStore.activeProject()?.id ?? '';
+    effect(() => {
+      const id = this.syncStore.activeProject()?.id ?? '';
+      if (id !== prev) {
+        prev = id;
+        this.selectedIssue.set(null);
+        this.selectedBranches.set(new Set());
+      }
+    });
   }
 
   /** Reflects the tag filter selected in Sincronizar (shared via SyncStore). */
@@ -568,6 +583,7 @@ export class LinkComponent implements OnInit {
     if (existing) await this.state.mergeLinksFromMarkdown(existing, ctx.projectId);
     const content = this.state.buildLinksMarkdown(ctx.projectId);
     await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE, content);
+    await this.state.markPublished(ctx.projectId, 'links');
     this.lastWikiImport.set(new Date().toISOString());
     this.notifications.push('success', 'Publicado no Wiki com sucesso!');
   }

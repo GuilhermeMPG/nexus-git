@@ -1,13 +1,14 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { LucideEye, LucideEyeOff, LucideTriangleAlert, LucideLoaderCircle } from '@lucide/angular';
 import { SessionStore } from '../../core/session.store';
 import { ConfigService } from '../../core/config.service';
 import { TauriBridgeService } from '../../core/tauri-bridge.service';
 
 @Component({
   selector: 'app-auth',
-  imports: [FormsModule],
+  imports: [FormsModule, LucideEye, LucideEyeOff, LucideTriangleAlert, LucideLoaderCircle],
   templateUrl: './auth.component.html',
 })
 export class AuthComponent implements OnInit {
@@ -22,16 +23,36 @@ export class AuthComponent implements OnInit {
   protected error = signal('');
   protected showToken = signal(false);
 
+  protected restoring = signal(true);
+  protected canRetryRestore = signal(false);
+
   async ngOnInit() {
     try {
       const cfg = await this.configService.load();
       this.gitlabUrl.set(cfg.gitlabBaseUrl);
-      const restored = await this.session.tryRestoreSession();
-      if (restored) {
-        this.router.navigate(['/app']);
-      }
+      await this.attemptRestore();
     } catch {
       // Fora do contexto Tauri: mantém defaults
+      this.restoring.set(false);
+    }
+  }
+
+  protected async attemptRestore() {
+    this.restoring.set(true);
+    this.canRetryRestore.set(false);
+    try {
+      const result = await this.session.tryRestoreSession();
+      if (result === 'restored') {
+        this.router.navigate(['/app']);
+        return;
+      }
+      this.canRetryRestore.set(result === 'retry');
+    } catch {
+      // Falha inesperada ao restaurar — não assume que o token foi perdido, só não
+      // conseguimos confirmar agora. Oferece a opção de tentar de novo.
+      this.canRetryRestore.set(true);
+    } finally {
+      this.restoring.set(false);
     }
   }
 

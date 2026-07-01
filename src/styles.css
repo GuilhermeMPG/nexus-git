@@ -10,3 +10,10 @@ body {
 ::-webkit-scrollbar-track { @apply bg-gray-900; }
 ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded-full; }
 ::-webkit-scrollbar-thumb:hover { @apply bg-gray-600; }
+
+/* WebView2 (Edge/Chromium) adds its own built-in reveal/clear icons to password
+   inputs — hide them so they don't double up with our custom eye toggle button. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}

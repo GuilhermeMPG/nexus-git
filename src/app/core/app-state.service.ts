@@ -115,6 +115,38 @@ export class AppStateService {
     await this.bridge.saveState(this.snapshot());
   }
 
+  /**
+   * Removes links/errors (and their publish/tombstone bookkeeping) belonging to projects that
+   * no longer exist — called after the config is saved so removing a project also clears its
+   * data instead of leaving orphans that resurface under the wrong project. Returns how many
+   * items were pruned. No-op (returns 0) if the valid set is empty, as a guard against wiping
+   * everything when the config failed to load.
+   */
+  async pruneOrphans(validProjectIds: string[]): Promise<number> {
+    const valid = new Set(validProjectIds);
+    if (!valid.size) return 0;
+
+    const staleLinks = this.links().filter(l => !valid.has(l.projectId ?? ''));
+    const staleErrors = this.errors().filter(e => !valid.has(e.projectId ?? ''));
+    if (!staleLinks.length && !staleErrors.length) return 0;
+
+    this.links.set(this.links().filter(l => valid.has(l.projectId ?? '')));
+    this.errors.set(this.errors().filter(e => valid.has(e.projectId ?? '')));
+
+    // Drop bookkeeping keyed by the removed projects too.
+    for (const key of [...this._deletedLinkKeys]) {
+      if (!valid.has(key.split(':')[0])) this._deletedLinkKeys.delete(key);
+    }
+    this.lastPublishedAt.update(m => {
+      const next: Record<string, string> = {};
+      for (const [k, v] of Object.entries(m)) if (valid.has(k.split(':')[0])) next[k] = v;
+      return next;
+    });
+
+    await this.persist();
+    return staleLinks.length + staleErrors.length;
+  }
+
   // ── Sprints ──────────────────────────────────────────────────────────────
   async addSprint(name: string) {
     const trimmed = name.trim();
@@ -443,16 +475,26 @@ export class AppStateService {
     if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
     await this.bridge.pushWikiPage(baseUrl, token, project.wikiProjectPath, slug, title, content);
 
-    const key = this.publishKey(project.id, kind);
-    this.lastPublishedAt.update(m => ({ ...m, [key]: new Date().toISOString() }));
-    this.remotePending.update(m => ({ ...m, [key]: false }));
-    await this.persist();
+    await this.markPublished(project.id, kind);
 
     const count = kind === 'links'
       ? this.links().filter(l => l.projectId === project.id).length
       : this.errors().filter(e => e.projectId === project.id).length;
 
     return { count, wikiCount };
+  }
+
+  /**
+   * Records that a project/kind was just published: stamps the last-publish time (so
+   * `pendingCount` drops to 0) and clears the remote-pending flag. Must be called by ANY
+   * successful publish path — including the Vínculos/Erros tabs, which push directly via
+   * their own merge-confirm dialog instead of going through `publishProjectKind`.
+   */
+  async markPublished(projectId: string, kind: 'links' | 'errors'): Promise<void> {
+    const key = this.publishKey(projectId, kind);
+    this.lastPublishedAt.update(m => ({ ...m, [key]: new Date().toISOString() }));
+    this.remotePending.update(m => ({ ...m, [key]: false }));
+    await this.persist();
   }
 
   /** Items changed locally since the last successful publish for this project/kind. */

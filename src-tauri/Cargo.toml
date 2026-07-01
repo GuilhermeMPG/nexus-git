@@ -23,7 +23,9 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
-keyring = "3"
+# windows-native: sem esta feature, o keyring 3.x cai num "mock store" em memória
+# que NÃO persiste — o token some ao fechar o app. Ela habilita o Windows Credential Manager real.
+keyring = { version = "3", features = ["windows-native"] }
 dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }

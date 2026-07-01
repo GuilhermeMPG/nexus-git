@@ -131,19 +131,17 @@ export class SyncComponent implements OnInit {
   });
 
   // Coverage & gaps (scoped to active project)
+  // Só rastreamos "cards sem branch" — o inverso (branches sem card) não é um gap real,
+  // já que a maioria das branches (main, develop, releases, etc.) nunca precisa de um card.
   protected showCoverage = signal(false);
   private linkedIssueIids = computed(() => new Set(this.state.links().map(l => l.issueIid)));
-  private linkedBranchNames = computed(() => new Set(this.state.links().flatMap(l => l.branchNames)));
+  // Reflete o mesmo filtro de tags aplicado à lista de cards (displayedIssues), não a lista bruta.
   protected unlinkedIssues = computed(() => {
     const iids = this.linkedIssueIids();
-    return this.issues().filter(i => !iids.has(i.iid));
-  });
-  protected orphanBranches = computed(() => {
-    const names = this.linkedBranchNames();
-    return this.branches().filter(b => !b.merged && !names.has(b.name));
+    return this.displayedIssues().filter(i => !iids.has(i.iid));
   });
   protected coveragePct = computed(() => {
-    const total = this.issues().length;
+    const total = this.displayedIssues().length;
     if (!total) return null;
     return Math.round(((total - this.unlinkedIssues().length) / total) * 100);
   });

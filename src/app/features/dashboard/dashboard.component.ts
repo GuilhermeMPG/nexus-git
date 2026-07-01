@@ -1,11 +1,11 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { AppStateService } from '../../core/app-state.service';
 import { SyncStore } from '../../core/sync.store';
-import { LucideInbox, LucideGitBranch, LucideCheck } from '@lucide/angular';
+import { LucideInbox, LucideCheck } from '@lucide/angular';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [LucideInbox, LucideGitBranch, LucideCheck],
+  imports: [LucideInbox, LucideCheck],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
@@ -29,25 +29,20 @@ export class DashboardComponent implements OnInit {
     return this.issues().filter(i => !iids.has(i.iid));
   });
 
-  protected orphanBranches = computed(() => {
-    const names = this.linkedBranchNames();
-    return this.allBranchesFlat().filter(b => !b.merged && !names.has(b.name));
-  });
-
   protected issueCovPct = computed(() => {
     const total = this.issues().length;
     if (!total) return null;
     return Math.round(((total - this.unlinkedIssues().length) / total) * 100);
   });
 
+  // Não tratamos "branches sem card" como um gap: a maioria das branches (main, develop,
+  // releases, chores, etc.) nunca precisa estar vinculada a uma issue. Mostramos só a
+  // contagem de branches ativas e quantas delas já estão vinculadas, sem framing de "problema".
   protected activeBranchCount = computed(() => this.allBranchesFlat().filter(b => !b.merged).length);
 
-  protected linkedBranchCount = computed(() => this.activeBranchCount() - this.orphanBranches().length);
-
-  protected branchCovPct = computed(() => {
-    const total = this.activeBranchCount();
-    if (!total) return null;
-    return Math.round((this.linkedBranchCount() / total) * 100);
+  protected linkedBranchCount = computed(() => {
+    const names = this.linkedBranchNames();
+    return this.allBranchesFlat().filter(b => !b.merged && names.has(b.name)).length;
   });
 
   protected errorStats = computed(() => {

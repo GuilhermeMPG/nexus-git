@@ -94,6 +94,13 @@
                     <span class="text-xs text-orange-400 bg-orange-900/20 border border-orange-700/30
                                  px-2 py-0.5 rounded">Nenhum item</span>
                   }
+                  @if (pendingCount(project.id, kind) > 0) {
+                    <span class="flex items-center gap-1 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40
+                                 px-2 py-0.5 rounded">
+                      <svg lucideTriangleAlert class="w-3 h-3"></svg>
+                      {{ pendingCount(project.id, kind) }} pendente{{ pendingCount(project.id, kind) !== 1 ? 's' : '' }} de publicação
+                    </span>
+                  }
                 </div>
               </div>
 
@@ -125,14 +132,18 @@
                 <button
                   (click)="publishOne(project, kind)"
                   [disabled]="isLoading"
-                  class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                         disabled:opacity-50
-                         {{ st.state === 'success'
-                            ? 'bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-300 border border-emerald-700/40'
-                            : 'bg-gray-700 hover:bg-gray-600 text-white' }}">
+                  class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                         disabled:opacity-50 shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white"
+                  [title]="pendingCount(project.id, kind) > 0 ? pendingCount(project.id, kind) + ' item(ns) pendente(s) de publicação' : ''">
                   @if (st.state === 'loading') { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> }
                   @else if (st.state === 'success') { <svg lucideUpload class="w-3.5 h-3.5"></svg> Republicar }
                   @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> Publicar }
+                  @if (pendingCount(project.id, kind) > 0) {
+                    <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-amber-500 text-white text-[10px]
+                                 font-bold rounded-full flex items-center justify-center ring-2 ring-gray-900">
+                      {{ pendingCount(project.id, kind) }}
+                    </span>
+                  }
                 </button>
               </div>
             </div>

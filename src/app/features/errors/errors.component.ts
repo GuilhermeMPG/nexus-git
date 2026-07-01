@@ -628,6 +628,7 @@ export class ErrorsComponent implements OnInit {
     if (existing) await this.state.mergeErrorsFromMarkdown(existing, ctx.projectId);
     const content = this.state.buildErrorsMarkdown(ctx.projectId);
     await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE, content);
+    await this.state.markPublished(ctx.projectId, 'errors');
     this.lastWikiImport.set(new Date().toISOString());
     this.notifications.push('success', 'Publicado no Wiki com sucesso!');
   }

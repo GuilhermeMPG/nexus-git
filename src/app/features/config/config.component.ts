@@ -129,8 +129,7 @@ export class ConfigComponent implements OnInit {
 
     if (linkCount > 0 || errorCount > 0) {
       const msg = `O projeto "${project.name}" possui ${linkCount} vínculo(s) e ${errorCount} erro(s) registrados. ` +
-        `Esses dados NÃO serão excluídos automaticamente, mas ficarão órfãos (sem projeto associado visível na UI). ` +
-        `Remover mesmo assim?`;
+        `Ao salvar as configurações, esses dados serão removidos junto com o projeto. Remover mesmo assim?`;
       if (!confirm(msg)) return;
     }
 
@@ -264,6 +263,9 @@ export class ConfigComponent implements OnInit {
     this.saved.set(false);
     try {
       await this.configService.save(cfg);
+      // Depois de persistir a config, remove vínculos/erros de projetos que não existem mais,
+      // para a lista de cada aba ficar realmente exclusiva dos projetos configurados.
+      await this.appState.pruneOrphans(cfg.projects.map(p => p.id));
       this.saved.set(true);
       setTimeout(() => this.saved.set(false), 2500);
     } finally {

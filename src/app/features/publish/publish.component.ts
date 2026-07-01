@@ -88,6 +88,10 @@ export class PublishComponent implements OnInit {
     return this.state.errors().filter(e => e.projectId === projectId).length;
   }
 
+  protected pendingCount(projectId: string, kind: PublishKind): number {
+    return this.state.pendingCount(projectId, kind);
+  }
+
   private ctx() {
     const cfg = this.config.config();
     const token = this.session.token();
