@@ -1,59 +1,85 @@
-# NexusGit
+# Nexus-Git
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.5.
+Aplicativo desktop (Tauri + Angular + Rust) para rastreabilidade entre **Issues** e
+**Branches** no GitLab, gestão de erros de desenvolvimento e publicação automática de
+relatórios na **Wiki** — com suporte a múltiplos projetos de código/wiki simultâneos.
 
-## Development server
+Veja [ARCHITECTURE.md](./ARCHITECTURE.md) para detalhes de arquitetura e decisões de design.
 
-To start a local development server, run:
+## Stack
 
-```bash
-ng serve
-```
+- **Tauri 2.x** + **Angular 20** (standalone components, Signals) + **Rust** (`reqwest`, `keyring`)
+- Ícones via `@lucide/angular`
+- O token (PAT) do GitLab nunca sai do processo Rust — fica no Windows Credential Manager
+- Config e estado local em `%APPDATA%\nexus-git\` (`config.json`, `state.json`, escrita atômica)
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Funcionalidades
 
-## Code scaffolding
+- Multi-projeto: cada projeto tem seu repositório de código e destino de Wiki (próprio ou
+  centralizado, via prefixo de slug)
+- Sync: issues (paginado, filtro por assignee/estado/labels), branches, MRs, milestones
+- Vínculos e Erros: merge *last-write-wins* com a Wiki, preview de conflito antes de
+  importar/publicar, import/export CSV
+- Publicação automática em segundo plano (intervalo configurável)
+- Dashboard com cobertura agregada de todos os projetos habilitados
+- Atalhos de teclado (`Esc` fecha modais, `/` foca o filtro principal de cada tela)
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Desenvolvimento
 
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+Rodar o app em modo desenvolvimento (Angular + Rust com hot-reload):
 
 ```bash
-ng build
+npx tauri dev
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Só o frontend (sem a janela nativa — não funciona login/Wiki, que dependem do backend Rust):
 
 ```bash
-ng test
+npm start
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+## Testes
 
 ```bash
-ng e2e
+npm test
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Build de produção
 
-## Additional Resources
+**Portátil (`.exe` único, sem instalador)** — recomendado para distribuir rapidamente:
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+npm run portable
+```
+
+Gera `portable/Nexus-Git-vN.exe`, incrementando `N` automaticamente a cada execução (não
+sobrescreve builds anteriores). Internamente roda `tauri build --no-bundle`, que compila o
+frontend em modo produção e o binário Rust em release, sem depender de NSIS/WiX.
+
+> Requer o **WebView2 Runtime** na máquina onde for executado (já vem por padrão no
+> Windows 10 21H2+/Windows 11).
+>
+> Configurações e token ficam em `%APPDATA%\nexus-git\` e no Credential Manager do Windows —
+> específicos de cada máquina/usuário, não viajam junto com o `.exe`.
+
+**Instaladores (`.msi`/NSIS)** — requer NSIS ou WiX Toolset instalados:
+
+```bash
+npx tauri build
+```
+
+Os artefatos ficam em `src-tauri/target/release/bundle/`.
+
+## Estrutura
+
+```
+src/app/
+  core/       serviços singleton (config, estado, sync, auto-publish, notificações)
+  features/   uma pasta por tela (sync, link, errors, dashboard, publish, config, shell)
+  models/     tipos compartilhados TS
+src-tauri/
+  src/commands/   comandos Tauri (auth, storage, sync)
+  src/gitlab/     cliente HTTP do GitLab
+scripts/
+  build-portable.js   gera o .exe portátil versionado
+```

@@ -101,10 +101,10 @@
         </button>
       }
     </div>
-    <!-- Labels/colunas (OR) -->
+    <!-- Labels/colunas (OR) — afeta a busca no GitLab -->
     @if (configLabels().length) {
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="text-xs text-gray-600 shrink-0">Colunas:</span>
+        <span class="text-xs text-gray-600 shrink-0" title="Definidas nas Configurações — mudar isso busca de novo no GitLab">Colunas:</span>
         @for (label of configLabels(); track label) {
           <button (click)="toggleLabel(label)"
             class="text-xs px-2.5 py-1 rounded-full border transition-all
@@ -113,6 +113,24 @@
                       : 'bg-transparent border-gray-700 text-gray-600 line-through hover:border-gray-500' }}">
             {{ label }}
           </button>
+        }
+      </div>
+    }
+    <!-- Tags — filtro local instantâneo, descoberto dos cards já carregados -->
+    @if (discoveredTags().length) {
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-xs text-gray-600 shrink-0" title="Filtra a lista já carregada, sem buscar de novo">Tags:</span>
+        @for (tag of discoveredTags(); track tag) {
+          <button (click)="toggleLocalTag(tag)"
+            class="text-xs px-2.5 py-1 rounded-full border transition-all
+                   {{ localTagFilter().includes(tag)
+                      ? 'bg-emerald-900/40 border-emerald-500/40 text-emerald-300'
+                      : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500' }}">
+            {{ tag }}
+          </button>
+        }
+        @if (localTagFilter().length) {
+          <button (click)="localTagFilter.set([])" class="text-xs text-gray-600 hover:text-red-400 transition">Limpar</button>
         }
       </div>
     }
@@ -128,7 +146,7 @@
           <span class="text-sm font-medium text-gray-300">Cards (Issues)</span>
           @if (issues().length) {
             <span class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full">
-              {{ issues().length }}
+              {{ localTagFilter().length ? displayedIssues().length + '/' + issues().length : issues().length }}
             </span>
           }
         </div>
@@ -174,8 +192,12 @@
           <div class="text-center text-gray-600 text-sm py-12">
             Clique em "Buscar tudo" para carregar os cards
           </div>
+        } @else if (!displayedIssues().length) {
+          <div class="text-center text-gray-600 text-sm py-12">
+            Nenhum card corresponde às tags selecionadas.
+          </div>
         } @else {
-          @for (issue of issues(); track issue.id) {
+          @for (issue of displayedIssues(); track issue.id) {
             <div class="group bg-gray-800/60 hover:bg-gray-800 border border-gray-700/50
                         hover:border-gray-600 rounded-lg px-4 py-3 transition-colors">
               <div class="flex items-start justify-between gap-2">

@@ -58,6 +58,15 @@
             Alterar
           </button>
         </div>
+        <label class="flex items-center gap-3 cursor-pointer select-none pt-1">
+          <input type="checkbox"
+            [ngModel]="cfg.defaultAssigneeMe ?? true"
+            (ngModelChange)="updateField('defaultAssigneeMe', $event)"
+            class="accent-indigo-500 w-4 h-4" />
+          <span class="text-sm text-gray-400">
+            Filtrar por mim mesmo automaticamente ao abrir a Sincronização
+          </span>
+        </label>
       </div>
 
       <!-- Projetos (multi-project) -->

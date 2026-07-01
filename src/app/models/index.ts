@@ -27,6 +27,8 @@ export interface AppConfig {
   savedAssignees?: string[];
   autoPublishEnabled?: boolean;
   autoPublishIntervalMin?: number;
+  /** Default to true: pre-fill the Sync assignee filter with the logged-in user on load. */
+  defaultAssigneeMe?: boolean;
   // Legacy fields — present only in schema v1 configs, used by migration
   codeProjectPath?: string;
   reportTargets?: ReportTarget[];

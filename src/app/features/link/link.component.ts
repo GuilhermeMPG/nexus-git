@@ -178,6 +178,17 @@ export class LinkComponent implements OnInit {
     return suggestions;
   });
 
+  // Progressive reveal — avoids a wall of chips when there are many suggestions/sprints.
+  protected suggestionsShown = signal(10);
+  protected displayedSuggestions = computed(() => this.autoSuggestions().slice(0, this.suggestionsShown()));
+  protected showMoreSuggestions() { this.suggestionsShown.update(n => n + 20); }
+
+  protected sprintsShown = signal(15);
+  /** Most recently added sprint first (reverse insertion order), paginated. */
+  protected displayedSprints = computed(() => [...this.sprints()].reverse().slice(0, this.sprintsShown()));
+  protected showMoreSprints() { this.sprintsShown.update(n => n + 15); }
+  protected sprintRealIndex(name: string): number { return this.sprints().indexOf(name); }
+
   async ngOnInit() {
     await this.state.load();
     if (this.sprints().length > 0 && !this.selectedSprint()) {
