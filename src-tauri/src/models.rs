@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Kept only for migration reading of schema v1 configs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +41,10 @@ fn default_auto_publish_interval_min() -> u32 {
     30
 }
 
+fn default_auto_check_interval_min() -> u32 {
+    15
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
@@ -61,6 +66,10 @@ pub struct AppConfig {
     pub auto_publish_interval_min: u32,
     #[serde(default = "default_true")]
     pub default_assignee_me: bool,
+    #[serde(default)]
+    pub auto_check_enabled: bool,
+    #[serde(default = "default_auto_check_interval_min")]
+    pub auto_check_interval_min: u32,
     /// Legacy schema v1 field — present only when migrating old configs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code_project_path: Option<String>,
@@ -82,6 +91,8 @@ impl Default for AppConfig {
             auto_publish_enabled: false,
             auto_publish_interval_min: default_auto_publish_interval_min(),
             default_assignee_me: true,
+            auto_check_enabled: false,
+            auto_check_interval_min: default_auto_check_interval_min(),
             // No legacy seed — fresh installs start with zero projects configured.
             code_project_path: None,
             report_targets: vec![
@@ -161,4 +172,7 @@ pub struct AppState {
     pub deleted_link_iids: Vec<u64>,
     #[serde(default)]
     pub deleted_error_ids: Vec<String>,
+    /// Last successful publish per "projectId:kind" — drives the pending-publish badge.
+    #[serde(default)]
+    pub last_published_at: HashMap<String, String>,
 }

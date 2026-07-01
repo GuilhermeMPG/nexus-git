@@ -72,6 +72,9 @@ export class LinkComponent implements OnInit {
   /** Lookup map for cross-referencing saved links with live issue data. */
   protected issueByIid = computed(() => new Map(this.issues().map(i => [i.iid, i])));
 
+  protected pendingPublishCount = computed(() => this.state.pendingCount(this.activeProjectId(), 'links'));
+  protected hasRemotePending = computed(() => this.state.remotePendingFor(this.activeProjectId(), 'links'));
+
   /** Milestones cujos títulos ainda não existem como sprint local. */
   protected importableMilestones = computed(() => {
     const existing = new Set(this.sprints());

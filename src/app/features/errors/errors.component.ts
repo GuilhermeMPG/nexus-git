@@ -67,6 +67,9 @@ export class ErrorsComponent implements OnInit {
     return this.allErrors().filter(e => e.projectId === pid);
   });
 
+  protected pendingPublishCount = computed(() => this.state.pendingCount(this.activeProjectId(), 'errors'));
+  protected hasRemotePending = computed(() => this.state.remotePendingFor(this.activeProjectId(), 'errors'));
+
   // Form
   protected editingId = signal<string | null>(null);
   protected formDescription = signal('');

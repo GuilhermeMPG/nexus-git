@@ -157,16 +157,27 @@
         </span>
       }
       <button (click)="pullFromWiki()" [disabled]="wikiLoading() || wikiPushing()"
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
-               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        class="relative flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
+               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors"
+        [title]="hasRemotePending() ? 'A Wiki tem alterações ainda não importadas' : ''">
         @if (wikiLoading()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideDownload class="w-3.5 h-3.5"></svg> }
         Importar Wiki
+        @if (hasRemotePending()) {
+          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full ring-2 ring-gray-900"></span>
+        }
       </button>
       <button (click)="pushToWiki()" [disabled]="wikiPushing() || wikiLoading()"
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600
-               disabled:opacity-50 text-gray-200 text-xs rounded-lg transition-colors">
+        class="relative flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500
+               disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors shadow-sm"
+        [title]="pendingPublishCount() > 0 ? pendingPublishCount() + ' vínculo(s) pendente(s) de publicação' : ''">
         @if (wikiPushing()) { <svg lucideLoaderCircle class="w-3.5 h-3.5 animate-spin"></svg> } @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> }
         Publicar Wiki
+        @if (pendingPublishCount() > 0) {
+          <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-amber-500 text-white text-[10px]
+                       font-bold rounded-full flex items-center justify-center ring-2 ring-gray-900">
+            {{ pendingPublishCount() }}
+          </span>
+        }
       </button>
       @if (csvState() === 'done') {
         <span class="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 px-2.5 py-1.5 rounded-lg">

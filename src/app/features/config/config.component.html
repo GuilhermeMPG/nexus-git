@@ -254,6 +254,37 @@
         }
       </div>
 
+      <!-- Checagem periódica da Wiki -->
+      <div class="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-3">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Verificar novidades na Wiki</h3>
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+          <input type="checkbox"
+            [ngModel]="cfg.autoCheckEnabled ?? false"
+            (ngModelChange)="updateField('autoCheckEnabled', $event)"
+            class="accent-indigo-500 w-4 h-4" />
+          <span class="text-sm text-gray-400">
+            Verificar periodicamente se a Wiki tem alterações que ainda não foram importadas
+            <span class="block text-xs text-gray-600 font-normal">
+              Só verifica e avisa (badge em "Importar Wiki") — nunca importa nem publica nada automaticamente.
+            </span>
+          </span>
+        </label>
+        @if (cfg.autoCheckEnabled) {
+          <div class="flex items-center gap-3 pl-7">
+            <label class="text-sm text-gray-400 shrink-0">A cada</label>
+            <select [ngModel]="cfg.autoCheckIntervalMin ?? 15"
+              (ngModelChange)="updateField('autoCheckIntervalMin', $event)"
+              class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5
+                     focus:outline-none focus:border-indigo-500 transition">
+              <option [value]="10">10 minutos</option>
+              <option [value]="15">15 minutos</option>
+              <option [value]="30">30 minutos</option>
+              <option [value]="60">1 hora</option>
+            </select>
+          </div>
+        }
+      </div>
+
     </div>
   } @else {
     <div class="flex items-center gap-2 text-gray-500 text-sm">

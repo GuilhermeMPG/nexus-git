@@ -29,6 +29,9 @@ export interface AppConfig {
   autoPublishIntervalMin?: number;
   /** Default to true: pre-fill the Sync assignee filter with the logged-in user on load. */
   defaultAssigneeMe?: boolean;
+  /** Periodic read-only check for unimported Wiki changes (never auto-publishes/imports). */
+  autoCheckEnabled?: boolean;
+  autoCheckIntervalMin?: number;
   // Legacy fields — present only in schema v1 configs, used by migration
   codeProjectPath?: string;
   reportTargets?: ReportTarget[];
@@ -115,6 +118,8 @@ export interface AppState {
   /** Legacy tombstones (iid-only). Migrated to deletedLinkKeys on load. */
   deletedLinkIids?: number[];
   deletedErrorIds?: string[];
+  /** Last successful publish per "${projectId}:${kind}" — drives the pending-publish badge. */
+  lastPublishedAt?: Record<string, string>;
 }
 
 export interface LinkChange {

@@ -36,6 +36,11 @@ export class AppStateService {
   readonly sprints = signal<string[]>([]);
   readonly errorGroups = signal<string[]>([]);
 
+  /** Last successful publish per "${projectId}:${kind}" — persisted, drives the pending badge. */
+  private readonly lastPublishedAt = signal<Record<string, string>>({});
+  /** Wiki has unimported changes per "${projectId}:${kind}" — transient, not persisted. */
+  private readonly remotePending = signal<Record<string, boolean>>({});
+
   private _loaded = false;
   /** Composite tombstone keys: "projectId:issueIid". */
   private _deletedLinkKeys = new Set<string>();
@@ -45,6 +50,10 @@ export class AppStateService {
     return `${projectId}:${issueIid}`;
   }
 
+  private publishKey(projectId: string, kind: 'links' | 'errors'): string {
+    return `${projectId}:${kind}`;
+  }
+
   reset() {
     this.links.set([]);
     this.errors.set([]);
@@ -52,6 +61,8 @@ export class AppStateService {
     this.errorGroups.set([]);
     this._deletedLinkKeys = new Set();
     this._deletedErrorIds = new Set();
+    this.lastPublishedAt.set({});
+    this.remotePending.set({});
     this._loaded = false;
   }
 
@@ -84,6 +95,7 @@ export class AppStateService {
     }
 
     this._deletedErrorIds = new Set(state.deletedErrorIds ?? []);
+    this.lastPublishedAt.set(state.lastPublishedAt ?? {});
     this._loaded = true;
   }
 
@@ -95,6 +107,7 @@ export class AppStateService {
       errorGroups: this.errorGroups(),
       deletedLinkKeys: Array.from(this._deletedLinkKeys),
       deletedErrorIds: Array.from(this._deletedErrorIds),
+      lastPublishedAt: this.lastPublishedAt(),
     };
   }
 
@@ -430,11 +443,52 @@ export class AppStateService {
     if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
     await this.bridge.pushWikiPage(baseUrl, token, project.wikiProjectPath, slug, title, content);
 
+    const key = this.publishKey(project.id, kind);
+    this.lastPublishedAt.update(m => ({ ...m, [key]: new Date().toISOString() }));
+    this.remotePending.update(m => ({ ...m, [key]: false }));
+    await this.persist();
+
     const count = kind === 'links'
       ? this.links().filter(l => l.projectId === project.id).length
       : this.errors().filter(e => e.projectId === project.id).length;
 
     return { count, wikiCount };
+  }
+
+  /** Items changed locally since the last successful publish for this project/kind. */
+  pendingCount(projectId: string, kind: 'links' | 'errors'): number {
+    const since = this.lastPublishedAt()[this.publishKey(projectId, kind)];
+    const sinceMs = since ? new Date(since).getTime() : 0;
+    const items: { projectId: string; updatedAt: string }[] = kind === 'links' ? this.links() : this.errors();
+    return items.filter(i => i.projectId === projectId && new Date(i.updatedAt).getTime() > sinceMs).length;
+  }
+
+  /** Whether the Wiki has changes not yet imported locally (set by the periodic check). */
+  remotePendingFor(projectId: string, kind: 'links' | 'errors'): boolean {
+    return !!this.remotePending()[this.publishKey(projectId, kind)];
+  }
+
+  /** Read-only: fetches the Wiki and diffs it against local state without importing anything. */
+  async checkRemotePending(
+    project: ProjectConfig,
+    kind: 'links' | 'errors',
+    baseUrl: string,
+    token: string,
+  ): Promise<boolean> {
+    const slug = kind === 'links' ? project.linksSlug : project.errorsSlug;
+    const title = kind === 'links' ? WIKI_TITLE_LINKS : WIKI_TITLE_ERRORS;
+    const content = await this.bridge.fetchWikiPage(baseUrl, token, project.wikiProjectPath, slug, title);
+    const key = this.publishKey(project.id, kind);
+    if (!content) {
+      this.remotePending.update(m => ({ ...m, [key]: false }));
+      return false;
+    }
+    const preview = kind === 'links'
+      ? this.previewLinkImport(content, project.id)
+      : this.previewErrorImport(content, project.id);
+    const pending = !!preview && (preview.toAdd.length > 0 || preview.toUpdate.length > 0);
+    this.remotePending.update(m => ({ ...m, [key]: pending }));
+    return pending;
   }
 
   private linkChanged(local: Link, wiki: Link): boolean {
@@ -485,7 +539,9 @@ export class AppStateService {
         this._deletedLinkKeys.delete(this.linkKey(projectId, link.issueIid));
       }
     }
-    return this.mergeLinksFromMarkdown(content, projectId);
+    const ok = await this.mergeLinksFromMarkdown(content, projectId);
+    this.remotePending.update(m => ({ ...m, [this.publishKey(projectId, 'links')]: false }));
+    return ok;
   }
 
   private errorChanged(local: DevError, wiki: DevError): boolean {
@@ -535,7 +591,9 @@ export class AppStateService {
     if (data?.errors) {
       for (const err of data.errors) this._deletedErrorIds.delete(err.id);
     }
-    return this.mergeErrorsFromMarkdown(content, projectId);
+    const ok = await this.mergeErrorsFromMarkdown(content, projectId);
+    this.remotePending.update(m => ({ ...m, [this.publishKey(projectId, 'errors')]: false }));
+    return ok;
   }
 
   async mergeLinksFromMarkdown(content: string, projectId: string): Promise<boolean> {

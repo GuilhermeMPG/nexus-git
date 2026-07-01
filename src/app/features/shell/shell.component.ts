@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { SessionStore } from '../../core/session.store';
 import { TauriBridgeService } from '../../core/tauri-bridge.service';
 import { AutoPublishService } from '../../core/auto-publish.service';
+import { AutoCheckService } from '../../core/auto-check.service';
 import { ToastComponent } from '../shared/toast.component';
 import { LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut } from '@lucide/angular';
 
@@ -26,6 +27,7 @@ export class ShellComponent implements OnInit {
   private bridge = inject(TauriBridgeService);
   private destroyRef = inject(DestroyRef);
   private autoPublish = inject(AutoPublishService);
+  private autoCheck = inject(AutoCheckService);
   protected session = inject(SessionStore);
 
   ngOnInit() {
@@ -33,6 +35,7 @@ export class ShellComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.logout());
     this.autoPublish.start();
+    this.autoCheck.start();
   }
 
   protected nav: NavItem[] = [
@@ -46,6 +49,7 @@ export class ShellComponent implements OnInit {
   async logout() {
     this.autoPublish.stop();
     this.autoPublish.cancelRunningCycle();
+    this.autoCheck.stop();
     await this.session.logout();
     this.router.navigate(['/auth']);
   }
