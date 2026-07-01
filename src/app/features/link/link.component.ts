@@ -46,7 +46,12 @@ export class LinkComponent implements OnInit {
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   }
 
-  protected issues = this.syncStore.issues;
+  /** Reflects the tag filter selected in Sincronizar (shared via SyncStore). */
+  protected issues = this.syncStore.filteredIssues;
+  protected allIssues = this.syncStore.issues;
+  protected discoveredTags = this.syncStore.discoveredTags;
+  protected activeTagFilter = this.syncStore.activeTagFilter;
+  protected toggleTagFilter = (tag: string) => this.syncStore.toggleTagFilter(tag);
   protected branches = this.syncStore.branches;
   protected milestones = this.syncStore.milestones;
   protected allLinks = this.state.links;
@@ -82,6 +87,9 @@ export class LinkComponent implements OnInit {
   // Filter inputs
   protected issueFilter = signal('');
   protected branchFilter = signal('');
+
+  // Auto-suggestions banner is collapsed by default — noisy when there are many.
+  protected showSuggestions = signal(false);
 
   // Sprint management
   protected newSprintName = signal('');

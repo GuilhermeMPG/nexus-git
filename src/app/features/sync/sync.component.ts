@@ -64,22 +64,11 @@ export class SyncComponent implements OnInit {
   protected issueState = signal<IssueState>('opened');
   protected activeLabels = signal<string[]>([]);
 
-  // Local, instant tag filter — auto-discovered from already-loaded issues (no refetch).
-  protected localTagFilter = signal<string[]>([]);
-  protected discoveredTags = computed(() => {
-    const set = new Set<string>();
-    for (const i of this.issues()) for (const l of i.labels) set.add(l);
-    return [...set].sort();
-  });
-  protected displayedIssues = computed(() => {
-    const sel = this.localTagFilter();
-    if (!sel.length) return this.issues();
-    return this.issues().filter(i => sel.some(t => i.labels.includes(t)));
-  });
-
-  protected toggleLocalTag(tag: string) {
-    this.localTagFilter.update(ts => ts.includes(tag) ? ts.filter(t => t !== tag) : [...ts, tag]);
-  }
+  // Local, instant tag filter — lives in SyncStore so Vínculos reflects the same selection.
+  protected localTagFilter = this.syncStore.activeTagFilter;
+  protected discoveredTags = this.syncStore.discoveredTags;
+  protected displayedIssues = this.syncStore.filteredIssues;
+  protected toggleLocalTag = (tag: string) => this.syncStore.toggleTagFilter(tag);
 
   // Branch display filters (client-side — no re-fetch needed)
   protected hideMerged = signal(true);

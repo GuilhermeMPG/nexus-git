@@ -7,6 +7,8 @@ export class SyncStore {
   private configService = inject(ConfigService);
 
   readonly issues = signal<Issue[]>([]);
+  /** Local, instant tag filter — shared by Sync and Vínculos so both reflect the same selection. */
+  readonly activeTagFilter = signal<string[]>([]);
   private _branchesByProject = signal<Map<string, Branch[]>>(new Map());
   private _mrsByProject = signal<Map<string, MergeRequest[]>>(new Map());
   private _milestonesByProject = signal<Map<string, Milestone[]>>(new Map());
@@ -39,6 +41,23 @@ export class SyncStore {
   readonly milestones = computed<Milestone[]>(() =>
     this._milestonesByProject().get('__global__') ?? []
   );
+
+  readonly discoveredTags = computed<string[]>(() => {
+    const set = new Set<string>();
+    for (const i of this.issues()) for (const l of i.labels) set.add(l);
+    return [...set].sort();
+  });
+
+  /** Issues after applying the local tag filter — the shared view Sync and Vínculos both read. */
+  readonly filteredIssues = computed<Issue[]>(() => {
+    const sel = this.activeTagFilter();
+    if (!sel.length) return this.issues();
+    return this.issues().filter(i => sel.some(t => i.labels.includes(t)));
+  });
+
+  toggleTagFilter(tag: string) {
+    this.activeTagFilter.update(ts => ts.includes(tag) ? ts.filter(t => t !== tag) : [...ts, tag]);
+  }
 
   setIssues(items: Issue[]) { this.issues.set(items); }
 
@@ -82,5 +101,6 @@ export class SyncStore {
     this._mrsByProject.set(new Map());
     this._milestonesByProject.set(new Map());
     this.activeProjectId.set('');
+    this.activeTagFilter.set([]);
   }
 }
