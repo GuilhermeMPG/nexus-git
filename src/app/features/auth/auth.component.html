@@ -99,5 +99,8 @@
         Token salvo no Windows Credential Manager · sem envio para servidores externos
       </p>
     }
+    @if (updateCheck.currentVersion(); as v) {
+      <p class="text-center text-[10px] text-gray-700 font-mono mt-2">v{{ v }}</p>
+    }
   </div>
 </div>

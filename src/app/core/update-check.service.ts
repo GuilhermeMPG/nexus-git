@@ -20,8 +20,13 @@ export class UpdateCheckService {
   private wasEnabled = false;
 
   readonly updateInfo = signal<UpdateInfo | null>(null);
+  /** The running build's own version — fetched once, independent of the periodic check
+   *  (and of whether it's enabled), so it can always be shown in the UI. */
+  readonly currentVersion = signal<string | null>(null);
 
   constructor() {
+    this.bridge.appVersion().then(v => this.currentVersion.set(v)).catch(() => {});
+
     effect(() => {
       const cfg = this.config.config();
       this.clearTimer();

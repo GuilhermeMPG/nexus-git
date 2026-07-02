@@ -6,6 +6,9 @@
     <div class="flex items-center gap-2 px-5 py-5 border-b border-gray-800">
       <span class="text-indigo-400 text-xl">⬡</span>
       <span class="font-semibold text-white tracking-wide text-sm">Nexus Git</span>
+      @if (updateCheck.currentVersion(); as v) {
+        <span class="text-[10px] text-gray-600 font-mono ml-auto">v{{ v }}</span>
+      }
     </div>
 
     <!-- Nav -->

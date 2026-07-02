@@ -17,6 +17,13 @@ pub struct UpdateInfo {
     pub release_url: String,
 }
 
+/// The version this binary was built with — always available, regardless of whether a
+/// newer release exists or the update check has even run yet.
+#[tauri::command]
+pub fn app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 /// Parses "v1.2.3" or "1.2.3" into a comparable tuple. Malformed tags sort as (0,0,0) so a
 /// bad release name never falsely triggers (or blocks) an update notice.
 fn parse_semver(tag: &str) -> Option<(u64, u64, u64)> {

@@ -5,6 +5,7 @@ import { LucideEye, LucideEyeOff, LucideTriangleAlert, LucideLoaderCircle } from
 import { SessionStore } from '../../core/session.store';
 import { ConfigService } from '../../core/config.service';
 import { TauriBridgeService } from '../../core/tauri-bridge.service';
+import { UpdateCheckService } from '../../core/update-check.service';
 
 @Component({
   selector: 'app-auth',
@@ -16,6 +17,7 @@ export class AuthComponent implements OnInit {
   private session = inject(SessionStore);
   private configService = inject(ConfigService);
   private bridge = inject(TauriBridgeService);
+  protected updateCheck = inject(UpdateCheckService);
 
   protected token = signal('');
   protected gitlabUrl = signal('https://gitlab.com');

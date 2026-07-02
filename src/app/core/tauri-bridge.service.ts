@@ -107,4 +107,8 @@ export class TauriBridgeService {
   checkForUpdate(repo: string) {
     return this.invoke<UpdateInfo>('check_for_update', { repo });
   }
+
+  appVersion() {
+    return this.invoke<string>('app_version');
+  }
 }
