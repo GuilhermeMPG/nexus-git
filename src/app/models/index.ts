@@ -32,9 +32,19 @@ export interface AppConfig {
   /** Periodic read-only check for unimported Wiki changes (never auto-publishes/imports). */
   autoCheckEnabled?: boolean;
   autoCheckIntervalMin?: number;
+  /** Periodic check against GitHub Releases for a newer app version (default: enabled). */
+  updateCheckEnabled?: boolean;
+  updateCheckIntervalMin?: number;
   // Legacy fields — present only in schema v1 configs, used by migration
   codeProjectPath?: string;
   reportTargets?: ReportTarget[];
+}
+
+export interface UpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseUrl: string;
 }
 
 export interface GitLabAssignee {

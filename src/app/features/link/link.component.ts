@@ -105,6 +105,8 @@ export class LinkComponent implements OnInit {
   // Filter inputs
   protected issueFilter = signal('');
   protected branchFilter = signal('');
+  /** Quando ativo, esconde da lista de cards os que já têm vínculo neste projeto. */
+  protected hideLinkedCards = signal(false);
 
   // Auto-suggestions banner is collapsed by default — noisy when there are many.
   protected showSuggestions = signal(false);
@@ -129,9 +131,18 @@ export class LinkComponent implements OnInit {
 
   protected filteredIssues = computed(() => {
     const q = this.issueFilter().toLowerCase();
+    const hideLinked = this.hideLinkedCards();
+    const linkedIids = hideLinked ? new Set(this.links().map(l => l.issueIid)) : null;
     return this.issues().filter(i =>
-      !q || i.title.toLowerCase().includes(q) || String(i.iid).includes(q)
+      (!q || i.title.toLowerCase().includes(q) || String(i.iid).includes(q)) &&
+      (!linkedIids || !linkedIids.has(i.iid))
     );
+  });
+
+  /** Quantos dos cards atualmente visíveis (sem o filtro de vinculados) já têm vínculo. */
+  protected linkedCardCount = computed(() => {
+    const linkedIids = new Set(this.links().map(l => l.issueIid));
+    return this.issues().filter(i => linkedIids.has(i.iid)).length;
   });
 
   protected filteredBranches = computed(() => {

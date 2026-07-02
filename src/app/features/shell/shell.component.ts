@@ -5,8 +5,9 @@ import { SessionStore } from '../../core/session.store';
 import { TauriBridgeService } from '../../core/tauri-bridge.service';
 import { AutoPublishService } from '../../core/auto-publish.service';
 import { AutoCheckService } from '../../core/auto-check.service';
+import { UpdateCheckService } from '../../core/update-check.service';
 import { ToastComponent } from '../shared/toast.component';
-import { LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut } from '@lucide/angular';
+import { LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut, LucideSparkles, LucideX } from '@lucide/angular';
 
 interface NavItem {
   path: string;
@@ -19,6 +20,7 @@ interface NavItem {
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, ToastComponent,
     LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut,
+    LucideSparkles, LucideX,
   ],
   templateUrl: './shell.component.html',
 })
@@ -28,6 +30,7 @@ export class ShellComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private autoPublish = inject(AutoPublishService);
   private autoCheck = inject(AutoCheckService);
+  protected updateCheck = inject(UpdateCheckService);
   protected session = inject(SessionStore);
 
   ngOnInit() {
@@ -36,6 +39,12 @@ export class ShellComponent implements OnInit {
       .subscribe(() => this.logout());
     this.autoPublish.start();
     this.autoCheck.start();
+    this.updateCheck.start();
+  }
+
+  async openReleasePage() {
+    const info = this.updateCheck.updateInfo();
+    if (info) await this.bridge.openUrl(info.releaseUrl);
   }
 
   protected nav: NavItem[] = [
@@ -50,6 +59,7 @@ export class ShellComponent implements OnInit {
     this.autoPublish.stop();
     this.autoPublish.cancelRunningCycle();
     this.autoCheck.stop();
+    this.updateCheck.stop();
     await this.session.logout();
     this.router.navigate(['/auth']);
   }

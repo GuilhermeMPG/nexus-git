@@ -2,7 +2,7 @@ mod commands;
 mod gitlab;
 mod models;
 
-use commands::{auth, storage, sync};
+use commands::{auth, storage, sync, updater};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -35,6 +35,7 @@ pub fn run() {
             sync::open_url,
             sync::fetch_merge_requests,
             sync::fetch_milestones,
+            updater::check_for_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

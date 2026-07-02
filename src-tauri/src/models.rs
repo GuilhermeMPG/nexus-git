@@ -45,6 +45,10 @@ fn default_auto_check_interval_min() -> u32 {
     15
 }
 
+fn default_update_check_interval_min() -> u32 {
+    360
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
@@ -70,6 +74,11 @@ pub struct AppConfig {
     pub auto_check_enabled: bool,
     #[serde(default = "default_auto_check_interval_min")]
     pub auto_check_interval_min: u32,
+    /// Read-only check against GitHub Releases — safe by default (no auth, no writes).
+    #[serde(default = "default_true")]
+    pub update_check_enabled: bool,
+    #[serde(default = "default_update_check_interval_min")]
+    pub update_check_interval_min: u32,
     /// Legacy schema v1 field — present only when migrating old configs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code_project_path: Option<String>,
@@ -93,6 +102,8 @@ impl Default for AppConfig {
             default_assignee_me: true,
             auto_check_enabled: false,
             auto_check_interval_min: default_auto_check_interval_min(),
+            update_check_enabled: true,
+            update_check_interval_min: default_update_check_interval_min(),
             // No legacy seed — fresh installs start with zero projects configured.
             code_project_path: None,
             report_targets: vec![

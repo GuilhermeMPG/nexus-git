@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { invoke } from '@tauri-apps/api/core';
-import { AppConfig, AppState, GitLabUser, Issue, Branch, GitLabProject, Milestone, MergeRequest, WikiPage } from '../models';
+import { AppConfig, AppState, GitLabUser, Issue, Branch, GitLabProject, Milestone, MergeRequest, WikiPage, UpdateInfo } from '../models';
 
 const isTauri = () => typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 
@@ -102,5 +102,9 @@ export class TauriBridgeService {
 
   openUrl(url: string) {
     return this.invoke<void>('open_url', { url });
+  }
+
+  checkForUpdate(repo: string) {
+    return this.invoke<UpdateInfo>('check_for_update', { repo });
   }
 }

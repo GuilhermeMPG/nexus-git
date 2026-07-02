@@ -374,11 +374,25 @@
     <!-- Issues column -->
     <div class="flex flex-col w-[calc(50%-6.5rem)] border-r border-gray-800 overflow-hidden">
       <div class="px-3 py-2 border-b border-gray-800 shrink-0 space-y-2">
-        <input type="text" #issueFilterInput
-          [ngModel]="issueFilter()" (ngModelChange)="issueFilter.set($event)"
-          placeholder="Filtrar cards... (/)"
-          class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
-                 placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+        <div class="flex items-center gap-2">
+          <input type="text" #issueFilterInput
+            [ngModel]="issueFilter()" (ngModelChange)="issueFilter.set($event)"
+            placeholder="Filtrar cards... (/)"
+            class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+          <button (click)="hideLinkedCards.set(!hideLinkedCards())"
+            [title]="hideLinkedCards() ? 'Mostrando só os cards ainda não vinculados' : 'Esconder cards já vinculados neste projeto'"
+            class="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-lg border transition-all shrink-0
+                   {{ hideLinkedCards()
+                      ? 'bg-emerald-900/40 border-emerald-500/40 text-emerald-300'
+                      : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500' }}">
+            <svg lucideCheck class="w-3 h-3"></svg>
+            Não vinculados
+            @if (linkedCardCount()) {
+              <span class="text-gray-600">({{ linkedCardCount() }} {{ hideLinkedCards() ? 'ocultos' : 'vinculados' }})</span>
+            }
+          </button>
+        </div>
         <!-- Filtro de tags — compartilhado com a Sincronizar -->
         @if (discoveredTags().length) {
           <div class="flex items-center gap-1 flex-wrap">
