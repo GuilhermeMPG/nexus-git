@@ -182,16 +182,19 @@ export class LinkComponent implements OnInit {
   protected filteredIssues = computed(() => {
     const q = this.issueFilter().toLowerCase();
     const hideLinked = this.hideLinkedCards();
-    const linkedIids = hideLinked ? new Set(this.links().map(l => l.issueIid)) : null;
+    // Cross-project: um card vinculado no Backend raramente também precisa de vínculo no
+    // Frontend, então "Não vinculados" esconde pelo estado em QUALQUER projeto, não só o ativo.
+    const linkedIids = hideLinked ? new Set(this.allLinks().map(l => l.issueIid)) : null;
     return this.issues().filter(i =>
       (!q || i.title.toLowerCase().includes(q) || String(i.iid).includes(q)) &&
       (!linkedIids || !linkedIids.has(i.iid))
     );
   });
 
-  /** Quantos dos cards atualmente visíveis (sem o filtro de vinculados) já têm vínculo. */
+  /** Quantos dos cards atualmente visíveis (sem o filtro de vinculados) já têm vínculo em
+   *  algum projeto — reflete o mesmo critério cross-project usado por hideLinkedCards. */
   protected linkedCardCount = computed(() => {
-    const linkedIids = new Set(this.links().map(l => l.issueIid));
+    const linkedIids = new Set(this.allLinks().map(l => l.issueIid));
     return this.issues().filter(i => linkedIids.has(i.iid)).length;
   });
 

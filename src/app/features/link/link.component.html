@@ -398,7 +398,7 @@
             class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
                    placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
           <button (click)="hideLinkedCards.set(!hideLinkedCards())"
-            [title]="hideLinkedCards() ? 'Mostrando só os cards ainda não vinculados' : 'Esconder cards já vinculados neste projeto'"
+            [title]="hideLinkedCards() ? 'Mostrando só os cards sem vínculo em nenhum projeto' : 'Esconder cards já vinculados em qualquer projeto'"
             class="flex items-center gap-1 text-[10px] px-2 py-1.5 rounded-lg border transition-all shrink-0
                    {{ hideLinkedCards()
                       ? 'bg-emerald-900/40 border-emerald-500/40 text-emerald-300'
