@@ -56,6 +56,8 @@ export class LinkComponent implements OnInit {
         prev = id;
         this.selectedIssue.set(null);
         this.selectedBranches.set(new Set());
+        this.selectedBranchMulti.set(null);
+        this.selectedIssuesMulti.set(new Set());
       }
     });
   }
@@ -100,6 +102,51 @@ export class LinkComponent implements OnInit {
   protected selectedBranches = signal<Set<string>>(new Set());
   protected selectedSprint = signal('');
   protected saving = signal(false);
+
+  /** 'issue': 1 card + N branches (original flow). 'branch': 1 branch + N cards (inverse). */
+  protected linkMode = signal<'issue' | 'branch'>('issue');
+  protected selectedBranchMulti = signal<Branch | null>(null);
+  protected selectedIssuesMulti = signal<Set<number>>(new Set());
+
+  protected setLinkMode(mode: 'issue' | 'branch') {
+    if (this.linkMode() === mode) return;
+    this.linkMode.set(mode);
+    // Limpa as duas seleções ao trocar de modo — evita confundir um card/branch escolhido
+    // num modo com uma ação disparada no outro.
+    this.selectedIssue.set(null);
+    this.selectedBranches.set(new Set());
+    this.selectedBranchMulti.set(null);
+    this.selectedIssuesMulti.set(new Set());
+  }
+
+  protected toggleIssueMulti(iid: number) {
+    const s = new Set(this.selectedIssuesMulti());
+    s.has(iid) ? s.delete(iid) : s.add(iid);
+    this.selectedIssuesMulti.set(s);
+  }
+
+  protected isIssueMultiSelected(iid: number): boolean {
+    return this.selectedIssuesMulti().has(iid);
+  }
+
+  protected selectBranchMulti(branch: Branch) {
+    const current = this.selectedBranchMulti();
+    this.selectedBranchMulti.set(current?.name === branch.name ? null : branch);
+  }
+
+  protected isBranchMultiSelected(name: string): boolean {
+    return this.selectedBranchMulti()?.name === name;
+  }
+
+  protected onIssueClick(issue: Issue) {
+    if (this.linkMode() === 'issue') this.selectIssue(issue);
+    else this.toggleIssueMulti(issue.iid);
+  }
+
+  protected onBranchClick(branch: Branch) {
+    if (this.linkMode() === 'issue') this.toggleBranch(branch.name);
+    else this.selectBranchMulti(branch);
+  }
 
   // Filter inputs
   protected issueFilter = signal('');
@@ -291,11 +338,24 @@ export class LinkComponent implements OnInit {
     return this.links().find(l => l.issueIid === iid)?.sprintName ?? '';
   }
 
-  protected canSave = computed(() =>
-    this.selectedIssue() !== null && this.selectedBranches().size > 0
+  protected canSave = computed(() => {
+    if (this.linkMode() === 'issue') {
+      return this.selectedIssue() !== null && this.selectedBranches().size > 0;
+    }
+    return this.selectedBranchMulti() !== null && this.selectedIssuesMulti().size > 0;
+  });
+
+  /** Rótulo do botão "Vincular", já refletindo a direção do modo ativo. */
+  protected saveCount = computed(() =>
+    this.linkMode() === 'issue' ? this.selectedBranches().size : this.selectedIssuesMulti().size
   );
 
   async save() {
+    if (this.linkMode() === 'issue') await this.saveIssueToBranches();
+    else await this.saveBranchToIssues();
+  }
+
+  private async saveIssueToBranches() {
     const issue = this.selectedIssue();
     const projectId = this.activeProjectId();
     if (!issue || !projectId || this.selectedBranches().size === 0) return;
@@ -304,6 +364,30 @@ export class LinkComponent implements OnInit {
       await this.state.addLink(issue.iid, issue.title, [...this.selectedBranches()], this.selectedSprint(), projectId);
       this.selectedIssue.set(null);
       this.selectedBranches.set(new Set());
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /** Vincula UMA branch a VÁRIOS cards de uma vez. addLink já mescla com as branches
+   *  existentes de cada card — não substitui. A sprint escolhida só é aplicada a cards
+   *  ainda sem vínculo; um card já vinculado mantém a sprint que já tinha. */
+  private async saveBranchToIssues() {
+    const branch = this.selectedBranchMulti();
+    const projectId = this.activeProjectId();
+    const iids = this.selectedIssuesMulti();
+    if (!branch || !projectId || iids.size === 0) return;
+    this.saving.set(true);
+    try {
+      const issueByIid = this.issueByIid();
+      for (const iid of iids) {
+        const issue = issueByIid.get(iid);
+        if (!issue) continue;
+        const existingSprint = this.links().find(l => l.issueIid === iid)?.sprintName;
+        await this.state.addLink(iid, issue.title, [branch.name], existingSprint ?? this.selectedSprint(), projectId);
+      }
+      this.selectedBranchMulti.set(null);
+      this.selectedIssuesMulti.set(new Set());
     } finally {
       this.saving.set(false);
     }

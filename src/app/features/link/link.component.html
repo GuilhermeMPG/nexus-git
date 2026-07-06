@@ -204,12 +204,12 @@
           @else { <svg lucideUpload class="w-3.5 h-3.5"></svg> CSV }
         </button>
       }
-      @if (selectedIssue()) {
+      @if (linkMode() === 'issue' ? selectedIssue() : selectedBranchMulti()) {
         <button (click)="save()" [disabled]="!canSave() || saving()"
           class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500
                  disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
           @if (saving()) { <svg lucideLoaderCircle class="w-4 h-4 animate-spin"></svg> Salvando... }
-          @else { <svg lucideLink2 class="w-4 h-4"></svg> Vincular ({{ selectedBranches().size }}) }
+          @else { <svg lucideLink2 class="w-4 h-4"></svg> Vincular ({{ saveCount() }}) }
         </button>
       }
     </div>
@@ -287,6 +287,23 @@
       </div>
     </div>
   }
+
+  <!-- Modo de vínculo: 1 card + N branches, ou 1 branch + N cards -->
+  <div class="flex items-center gap-2 px-8 py-2 border-b border-gray-800/60 bg-gray-950/30 shrink-0">
+    <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider shrink-0">Modo</span>
+    <div class="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-0.5">
+      <button (click)="setLinkMode('issue')"
+        class="px-2.5 py-1 text-xs rounded-md transition-colors
+               {{ linkMode() === 'issue' ? 'bg-indigo-600/30 text-indigo-300' : 'text-gray-500 hover:text-gray-300' }}">
+        1 card → várias branches
+      </button>
+      <button (click)="setLinkMode('branch')"
+        class="px-2.5 py-1 text-xs rounded-md transition-colors
+               {{ linkMode() === 'branch' ? 'bg-indigo-600/30 text-indigo-300' : 'text-gray-500 hover:text-gray-300' }}">
+        1 branch → vários cards
+      </button>
+    </div>
+  </div>
 
   <!-- Layout principal: seleção (2 colunas) + sprint bar -->
   <div class="flex flex-1 overflow-hidden">
@@ -423,12 +440,20 @@
           </div>
         }
         @for (issue of filteredIssues(); track issue.id) {
-          <button (click)="selectIssue(issue)"
+          <button (click)="onIssueClick(issue)"
             class="w-full text-left px-3 py-2 rounded-lg border transition-all
-                   {{ selectedIssue()?.iid === issue.iid
+                   {{ (linkMode() === 'issue' ? selectedIssue()?.iid === issue.iid : isIssueMultiSelected(issue.iid))
                       ? 'bg-indigo-600/20 border-indigo-500 ring-1 ring-indigo-500/50'
                       : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600' }}">
             <div class="flex items-start gap-1.5">
+              @if (linkMode() === 'branch') {
+                <div class="w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center mt-0.5
+                            {{ isIssueMultiSelected(issue.iid) ? 'bg-indigo-500 border-indigo-500' : 'border-gray-600' }}">
+                  @if (isIssueMultiSelected(issue.iid)) {
+                    <svg lucideCheck class="w-2.5 h-2.5 text-white"></svg>
+                  }
+                </div>
+              }
               <span class="text-indigo-400 font-mono text-xs shrink-0 mt-0.5">#{{ issue.iid }}</span>
               <div class="flex-1 min-w-0">
                 <p class="text-white text-xs leading-snug line-clamp-2">{{ issue.title }}</p>
@@ -462,7 +487,7 @@
     <!-- Branches column -->
     <div class="flex flex-col flex-1 overflow-hidden">
       <div class="px-3 py-2 border-b border-gray-800 shrink-0">
-        @if (selectedIssue()) {
+        @if (linkMode() === 'issue' ? selectedIssue() : selectedBranchMulti()) {
           <div class="flex items-center gap-2 mb-2">
             <span class="text-xs text-gray-500 shrink-0">Sprint:</span>
             <select [ngModel]="selectedSprint()" (ngModelChange)="selectedSprint.set($event)"
@@ -481,7 +506,7 @@
           class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5
                  placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
       </div>
-      @if (!selectedIssue()) {
+      @if (linkMode() === 'issue' && !selectedIssue()) {
         <div class="flex flex-col items-center justify-center flex-1 text-center px-6">
           <p class="text-gray-600 text-xs">Selecione um card ao lado</p>
           <p class="text-gray-700 text-xs mt-0.5">para vincular branches</p>
@@ -493,17 +518,19 @@
               Nenhuma branch. Acesse Sincronizar primeiro.
             </div>
           }
+          @if (linkMode() === 'branch') {
+            <p class="text-gray-700 text-xs px-1 pb-1">Selecione 1 branch, depois os cards ao lado</p>
+          }
           @for (branch of filteredBranches(); track branch.name) {
-            <button (click)="toggleBranch(branch.name)"
+            @let isSelected = linkMode() === 'issue' ? isBranchSelected(branch.name) : isBranchMultiSelected(branch.name);
+            <button (click)="onBranchClick(branch)"
               class="w-full text-left px-3 py-2 rounded-lg border transition-all flex items-center gap-2
-                     {{ isBranchSelected(branch.name)
+                     {{ isSelected
                         ? 'bg-emerald-600/20 border-emerald-500 ring-1 ring-emerald-500/50'
                         : 'bg-gray-800/50 border-gray-700/50 hover:bg-gray-800 hover:border-gray-600' }}">
               <div class="w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center
-                          {{ isBranchSelected(branch.name)
-                             ? 'bg-emerald-500 border-emerald-500'
-                             : 'border-gray-600' }}">
-                @if (isBranchSelected(branch.name)) {
+                          {{ isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600' }}">
+                @if (isSelected) {
                   <svg lucideCheck class="w-2.5 h-2.5 text-white"></svg>
                 }
               </div>
