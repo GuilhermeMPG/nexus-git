@@ -220,10 +220,14 @@ export class ConfigComponent implements OnInit {
 
   closeWikiPicker() { this.wikiPickerTarget.set(null); }
 
-  selectWikiPage(slug: string) {
+  /** Picking an existing page captures its REAL title too — that's what actually identifies
+   *  the page to GitLab, so publishing keeps hitting this exact page (no risk of the app
+   *  falling back to a differently-titled page, or accidentally creating a duplicate). */
+  selectWikiPage(page: WikiPage) {
     const t = this.wikiPickerTarget();
     if (!t) return;
-    this.updateProject(t.projectIndex, { [t.slugField]: slug });
+    const titleField = t.slugField === 'linksSlug' ? 'linksWikiTitle' : 'errorsWikiTitle';
+    this.updateProject(t.projectIndex, { [t.slugField]: page.slug, [titleField]: page.title });
     this.closeWikiPicker();
   }
 

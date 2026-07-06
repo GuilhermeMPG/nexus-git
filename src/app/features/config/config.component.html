@@ -179,7 +179,36 @@
                     </button>
                   </div>
                 </div>
+                <div class="space-y-1">
+                  <label class="text-xs text-gray-500">
+                    Título da página — Vínculos
+                    <span class="text-gray-700 normal-case font-normal">(é isso, não o slug, que identifica a página no GitLab)</span>
+                  </label>
+                  <input type="text"
+                    [ngModel]="project.linksWikiTitle" (ngModelChange)="updateProject(i, { linksWikiTitle: $event })"
+                    [placeholder]="project.linksSlug || 'Título exato da página no Wiki'"
+                    class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-xs
+                           focus:outline-none focus:border-indigo-500 transition" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs text-gray-500">
+                    Título da página — Erros
+                    <span class="text-gray-700 normal-case font-normal">(é isso, não o slug, que identifica a página no GitLab)</span>
+                  </label>
+                  <input type="text"
+                    [ngModel]="project.errorsWikiTitle" (ngModelChange)="updateProject(i, { errorsWikiTitle: $event })"
+                    [placeholder]="project.errorsSlug || 'Título exato da página no Wiki'"
+                    class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-xs
+                           focus:outline-none focus:border-indigo-500 transition" />
+                </div>
               </div>
+              <p class="text-xs text-gray-600">
+                Cada projeto precisa de um título de página distinto — se dois projetos usarem o mesmo título,
+                a publicação de um vai parar sobrescrevendo a página do outro. Use o botão
+                <svg lucideFileText class="w-3 h-3 inline"></svg> para escolher uma página já existente
+                (o título é preenchido automaticamente), ou digite um título novo para criar uma página nova
+                na próxima publicação.
+              </p>
             }
           </div>
         }
@@ -366,7 +395,7 @@
           </div>
         } @else {
           @for (page of filteredWikiPages(); track page.slug) {
-            <button (click)="selectWikiPage(page.slug)"
+            <button (click)="selectWikiPage(page)"
               class="w-full text-left px-6 py-3 hover:bg-gray-800 border-b border-gray-800/60 last:border-0
                      transition-colors group">
               <div class="flex items-center justify-between gap-3">

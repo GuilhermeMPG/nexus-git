@@ -15,6 +15,15 @@ export interface ProjectConfig {
   linksSlug: string;
   errorsSlug: string;
   enabled: boolean;
+  /**
+   * The Wiki page's real title — this, not the slug above, is what GitLab actually uses to
+   * identify the page. Undefined means "use the slug itself as the title" (fresh project: a
+   * publish creates a brand-new page named after whatever was typed). Projects that existed
+   * before this field was introduced were migrated to the old shared constant, so their
+   * already-published page keeps working exactly as before.
+   */
+  linksWikiTitle?: string;
+  errorsWikiTitle?: string;
 }
 
 export interface AppConfig {

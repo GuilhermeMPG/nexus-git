@@ -8,7 +8,6 @@ import { TauriBridgeService } from '../../core/tauri-bridge.service';
 import { NotificationService } from '../../core/notification.service';
 import { ProjectSwitcherComponent } from '../shared/project-switcher.component';
 import { Issue, Branch, LinkDiffPreview } from '../../models';
-import { WIKI_TITLE_LINKS } from '../../core/wiki-constants';
 import {
   LucideLoaderCircle, LucideDownload, LucideUpload, LucideCheck, LucideLink2, LucideSparkles,
   LucideGitBranch, LucideArrowRight, LucideX, LucideArrowUp, LucideArrowDown, LucidePencil, LucideTarget, LucideTrash2,
@@ -239,7 +238,7 @@ export class LinkComponent implements OnInit {
     if (!ctx) return;
     this.wikiImporting.set(true);
     try {
-      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       if (content && await this.state.mergeLinksFromMarkdown(content, ctx.projectId)) {
         this.lastWikiImport.set(new Date().toISOString());
       }
@@ -469,8 +468,6 @@ export class LinkComponent implements OnInit {
   cancelRenameSprint() { this.renamingSprintOld.set(''); }
 
   // Wiki
-  private readonly WIKI_TITLE = WIKI_TITLE_LINKS;
-
   private wikiCtx() {
     const project = this.syncStore.activeProject();
     const token = this.session.token();
@@ -482,6 +479,7 @@ export class LinkComponent implements OnInit {
       projectId: project.id,
       projectPath: project.wikiProjectPath,
       slug: project.linksSlug,
+      title: project.linksWikiTitle?.trim() || project.linksSlug,
     };
   }
 
@@ -495,7 +493,7 @@ export class LinkComponent implements OnInit {
     if (!ctx) { this.notifications.push('error', 'Configure um projeto com Wiki nas Configurações.'); return; }
     this.wikiLoading.set(true);
     try {
-      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       if (!content) {
         this.notifications.push('error', 'Página não encontrada no Wiki. Publique primeiro ou verifique o slug nas Configurações.');
         return;
@@ -547,7 +545,7 @@ export class LinkComponent implements OnInit {
     if (!ctx) { this.notifications.push('error', 'Configure um projeto com Wiki nas Configurações.'); return; }
     this.wikiPushing.set(true);
     try {
-      const existing = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const existing = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       const preview = this.state.previewLinkPublish(existing, ctx.projectId);
 
       if (preview.toUpdate.length > 0 || preview.toRemove.length > 0) {
@@ -588,12 +586,12 @@ export class LinkComponent implements OnInit {
   }
 
   private async doPushToWiki(
-    ctx: { baseUrl: string; token: string; projectId: string; projectPath: string; slug: string },
+    ctx: { baseUrl: string; token: string; projectId: string; projectPath: string; slug: string; title: string },
     existing: string | null,
   ) {
     if (existing) await this.state.mergeLinksFromMarkdown(existing, ctx.projectId);
     const content = this.state.buildLinksMarkdown(ctx.projectId);
-    await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE, content);
+    await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title, content);
     await this.state.markPublished(ctx.projectId, 'links');
     this.lastWikiImport.set(new Date().toISOString());
     this.notifications.push('success', 'Publicado no Wiki com sucesso!');

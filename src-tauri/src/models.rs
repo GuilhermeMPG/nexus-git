@@ -31,6 +31,12 @@ pub struct ProjectConfig {
     pub errors_slug: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
+    /// The Wiki page's real title (the field that actually identifies a page to GitLab).
+    /// Absent for a fresh project — meaning "use the slug as the title" on first publish.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub links_wiki_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub errors_wiki_title: Option<String>,
 }
 
 fn default_true() -> bool {

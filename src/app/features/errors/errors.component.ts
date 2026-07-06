@@ -8,7 +8,6 @@ import { SyncStore } from '../../core/sync.store';
 import { NotificationService } from '../../core/notification.service';
 import { ProjectSwitcherComponent } from '../shared/project-switcher.component';
 import { DevError, ErrorStatus, ErrorDiffPreview } from '../../models';
-import { WIKI_TITLE_ERRORS } from '../../core/wiki-constants';
 import {
   LucideGitBranch, LucideLoaderCircle, LucideDownload, LucideUpload, LucideCheck, LucideX,
   LucideChevronDown, LucidePencil, LucideTrash2, LucideArrowRight, LucideKeyboard, LucideList,
@@ -329,7 +328,7 @@ export class ErrorsComponent implements OnInit {
     if (!ctx) return;
     this.wikiImporting.set(true);
     try {
-      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       if (content && await this.state.mergeErrorsFromMarkdown(content, ctx.projectId)) {
         this.lastWikiImport.set(new Date().toISOString());
       }
@@ -503,8 +502,6 @@ export class ErrorsComponent implements OnInit {
   }
 
   // Wiki
-  private readonly WIKI_TITLE = WIKI_TITLE_ERRORS;
-
   private wikiCtx() {
     const project = this.syncStore.activeProject();
     const token = this.session.token();
@@ -516,6 +513,7 @@ export class ErrorsComponent implements OnInit {
       projectId: project.id,
       projectPath: project.wikiProjectPath,
       slug: project.errorsSlug,
+      title: project.errorsWikiTitle?.trim() || project.errorsSlug,
     };
   }
 
@@ -529,7 +527,7 @@ export class ErrorsComponent implements OnInit {
     if (!ctx) { this.notifications.push('error', 'Configure um projeto com Wiki nas Configurações.'); return; }
     this.wikiLoading.set(true);
     try {
-      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const content = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       if (!content) {
         this.notifications.push('error', 'Página não encontrada. Publique primeiro ou verifique o slug nas Configurações.');
         return;
@@ -581,7 +579,7 @@ export class ErrorsComponent implements OnInit {
     if (!ctx) { this.notifications.push('error', 'Configure um projeto com Wiki nas Configurações.'); return; }
     this.wikiPushing.set(true);
     try {
-      const existing = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE);
+      const existing = await this.bridge.fetchWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title);
       const preview = this.state.previewErrorPublish(existing, ctx.projectId);
 
       if (preview.toUpdate.length > 0 || preview.toRemove.length > 0) {
@@ -622,12 +620,12 @@ export class ErrorsComponent implements OnInit {
   }
 
   private async doPushToWiki(
-    ctx: { baseUrl: string; token: string; projectId: string; projectPath: string; slug: string },
+    ctx: { baseUrl: string; token: string; projectId: string; projectPath: string; slug: string; title: string },
     existing: string | null,
   ) {
     if (existing) await this.state.mergeErrorsFromMarkdown(existing, ctx.projectId);
     const content = this.state.buildErrorsMarkdown(ctx.projectId);
-    await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, this.WIKI_TITLE, content);
+    await this.bridge.pushWikiPage(ctx.baseUrl, ctx.token, ctx.projectPath, ctx.slug, ctx.title, content);
     await this.state.markPublished(ctx.projectId, 'errors');
     this.lastWikiImport.set(new Date().toISOString());
     this.notifications.push('success', 'Publicado no Wiki com sucesso!');

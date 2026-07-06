@@ -452,7 +452,9 @@ export class AppStateService {
     signal?: AbortSignal,
   ): Promise<{ count: number; wikiCount: number | null }> {
     const slug = kind === 'links' ? project.linksSlug : project.errorsSlug;
-    const title = kind === 'links' ? WIKI_TITLE_LINKS : WIKI_TITLE_ERRORS;
+    const title = kind === 'links'
+      ? (project.linksWikiTitle?.trim() || project.linksSlug)
+      : (project.errorsWikiTitle?.trim() || project.errorsSlug);
 
     const existing = await this.bridge.fetchWikiPage(baseUrl, token, project.wikiProjectPath, slug, title);
     if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
@@ -518,7 +520,9 @@ export class AppStateService {
     token: string,
   ): Promise<boolean> {
     const slug = kind === 'links' ? project.linksSlug : project.errorsSlug;
-    const title = kind === 'links' ? WIKI_TITLE_LINKS : WIKI_TITLE_ERRORS;
+    const title = kind === 'links'
+      ? (project.linksWikiTitle?.trim() || project.linksSlug)
+      : (project.errorsWikiTitle?.trim() || project.errorsSlug);
     const content = await this.bridge.fetchWikiPage(baseUrl, token, project.wikiProjectPath, slug, title);
     const key = this.publishKey(project.id, kind);
     if (!content) {

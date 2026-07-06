@@ -490,13 +490,17 @@ impl GitLabClient {
         content: &str,
     ) -> Result<(), String> {
         let encoded = Self::encode_path(project_path);
-        let body = serde_json::json!({ "content": content, "title": title, "format": "markdown" });
 
         // Resolve the real slug (handles slug auto-generated from title)
         let real_slug = self.find_wiki_slug(&encoded, slug, Some(title)).await?;
 
         if let Some(real_slug) = real_slug {
-            // Page exists — PUT to update using its real slug
+            // Page exists — PUT to update using its real slug. Deliberately omit `title` here:
+            // if the caller's configured title ever drifts from the page's actual stored title
+            // (e.g. a Config edit after the page already exists), sending it would rename the
+            // page — changing its slug/URL — as a side effect of what looks like just a content
+            // update. A rename should be an explicit action, not an accidental one.
+            let body = serde_json::json!({ "content": content, "format": "markdown" });
             let put_url = format!(
                 "{}/api/v4/projects/{}/wikis/{}",
                 self.base_url, encoded, urlencoding::encode(&real_slug)
