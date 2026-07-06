@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
@@ -7,7 +7,7 @@ import { AutoPublishService } from '../../core/auto-publish.service';
 import { AutoCheckService } from '../../core/auto-check.service';
 import { UpdateCheckService } from '../../core/update-check.service';
 import { ToastComponent } from '../shared/toast.component';
-import { LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut, LucideSparkles, LucideX } from '@lucide/angular';
+import { LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut, LucideSparkles, LucideX, LucideLoaderCircle } from '@lucide/angular';
 
 interface NavItem {
   path: string;
@@ -20,7 +20,7 @@ interface NavItem {
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, ToastComponent,
     LucideLayoutDashboard, LucideRefreshCw, LucideLink2, LucideBug, LucideUpload, LucideSettings, LucideLogOut,
-    LucideSparkles, LucideX,
+    LucideSparkles, LucideX, LucideLoaderCircle,
   ],
   templateUrl: './shell.component.html',
 })
@@ -32,6 +32,8 @@ export class ShellComponent implements OnInit {
   private autoCheck = inject(AutoCheckService);
   protected updateCheck = inject(UpdateCheckService);
   protected session = inject(SessionStore);
+
+  protected showReleaseNotes = signal(false);
 
   ngOnInit() {
     this.bridge.unauthorized$
@@ -45,6 +47,11 @@ export class ShellComponent implements OnInit {
   async openReleasePage() {
     const info = this.updateCheck.updateInfo();
     if (info) await this.bridge.openUrl(info.releaseUrl);
+  }
+
+  openReleaseNotes() {
+    this.showReleaseNotes.set(true);
+    this.updateCheck.loadReleaseNotes();
   }
 
   protected nav: NavItem[] = [

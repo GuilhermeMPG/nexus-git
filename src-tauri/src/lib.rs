@@ -37,6 +37,7 @@ pub fn run() {
             sync::fetch_milestones,
             updater::check_for_update,
             updater::app_version,
+            updater::get_release_notes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

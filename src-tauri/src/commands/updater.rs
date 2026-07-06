@@ -24,6 +24,45 @@ pub fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+#[derive(Debug, Deserialize)]
+struct GitHubReleaseDetail {
+    #[serde(default)]
+    body: Option<String>,
+}
+
+/// Fetches the description/body of a specific GitHub release by tag (e.g. "v12.0.0") — used to
+/// show a "what's new" panel for the currently-running version. Same public, unauthenticated
+/// API as check_for_update.
+#[tauri::command]
+pub async fn get_release_notes(repo: String, tag: String) -> Result<String, String> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(15))
+        .user_agent("nexus-git-updater")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let url = format!("https://api.github.com/repos/{repo}/releases/tags/{tag}");
+    let resp = client
+        .get(&url)
+        .header("Accept", "application/vnd.github+json")
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() || e.is_connect() {
+                format!("network_error:{e}")
+            } else {
+                e.to_string()
+            }
+        })?;
+
+    if !resp.status().is_success() {
+        return Err(format!("http_error:{}", resp.status().as_u16()));
+    }
+
+    let release: GitHubReleaseDetail = resp.json().await.map_err(|e| e.to_string())?;
+    Ok(release.body.unwrap_or_default())
+}
+
 /// Parses "v1.2.3" or "1.2.3" into a comparable tuple. Malformed tags sort as (0,0,0) so a
 /// bad release name never falsely triggers (or blocks) an update notice.
 fn parse_semver(tag: &str) -> Option<(u64, u64, u64)> {

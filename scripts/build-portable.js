@@ -16,6 +16,12 @@
  * Uses `tauri build --no-bundle` rather than a bare `cargo build --release` — the raw cargo
  * build does not correctly embed the production frontend and ends up pointing at the dev
  * server (localhost:4200) instead.
+ *
+ * Release notes: if RELEASE_NOTES.md (repo root) has content, it's used as the release body —
+ * this is what the app's in-app "Novidades" panel displays for the running version, so it
+ * should be a short, human-readable summary (not raw commit messages). The file is cleared
+ * after a successful publish, so it must be rewritten before each release; otherwise this
+ * falls back to GitHub's auto-generated commit list.
  */
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -27,6 +33,7 @@ const releaseExe = path.join(root, 'src-tauri', 'target', 'release', 'app.exe');
 const cargoTomlPath = path.join(root, 'src-tauri', 'Cargo.toml');
 const cargoLockPath = path.join(root, 'src-tauri', 'Cargo.lock');
 const tauriConfPath = path.join(root, 'src-tauri', 'tauri.conf.json');
+const releaseNotesPath = path.join(root, 'RELEASE_NOTES.md');
 const REPO = 'GuilhermeMPG/nexus-git';
 
 function run(cmd) {
@@ -92,9 +99,19 @@ run(`git commit -m "Bump version to ${semver} (portable build v${version})"`);
 console.log(`\n> Tagging and publishing GitHub release ${tag}...`);
 run(`git tag ${tag}`);
 run(`git push origin master ${tag}`);
+
+const hasNotes = fs.existsSync(releaseNotesPath) && fs.readFileSync(releaseNotesPath, 'utf8').trim();
+const notesFlag = hasNotes ? `--notes-file "${releaseNotesPath}"` : '--generate-notes';
 run(
-  `gh release create ${tag} "${versionedPath}" "${stablePath}" --repo ${REPO} --title "Nexus-Git ${tag}" --generate-notes`
+  `gh release create ${tag} "${versionedPath}" "${stablePath}" --repo ${REPO} --title "Nexus-Git ${tag}" ${notesFlag}`
 );
+if (hasNotes) {
+  // Clear it so a stale summary can't accidentally get reused for the next, unrelated release.
+  fs.writeFileSync(releaseNotesPath, '');
+  run(`git add "${releaseNotesPath}"`);
+  run(`git commit -m "Clear RELEASE_NOTES.md after publishing ${tag}"`);
+  run(`git push origin master`);
+}
 
 console.log(`\nRelease published: https://github.com/${REPO}/releases/tag/${tag}`);
 console.log(`Link fixo (sempre a versão mais nova): https://github.com/${REPO}/releases/latest/download/${stableName}`);

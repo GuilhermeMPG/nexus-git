@@ -75,4 +75,26 @@ export class UpdateCheckService {
   dismiss() {
     this.updateInfo.set(null);
   }
+
+  // ── Release notes ("o que há de novo" nesta versão) ────────────────────────
+  readonly releaseNotes = signal<string | null>(null);
+  readonly releaseNotesLoading = signal(false);
+  readonly releaseNotesError = signal('');
+
+  /** Fetched on demand (only when the user opens the panel), not eagerly on every launch. */
+  async loadReleaseNotes() {
+    const version = this.currentVersion();
+    if (!version) return;
+    this.releaseNotesLoading.set(true);
+    this.releaseNotesError.set('');
+    this.releaseNotes.set(null);
+    try {
+      const notes = await this.bridge.getReleaseNotes(REPO, `v${version}`);
+      this.releaseNotes.set(notes.trim() || 'Sem notas de versão para esta build.');
+    } catch {
+      this.releaseNotesError.set('Não foi possível carregar as notas desta versão.');
+    } finally {
+      this.releaseNotesLoading.set(false);
+    }
+  }
 }

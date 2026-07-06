@@ -7,7 +7,10 @@
       <span class="text-indigo-400 text-xl">⬡</span>
       <span class="font-semibold text-white tracking-wide text-sm">Nexus Git</span>
       @if (updateCheck.currentVersion(); as v) {
-        <span class="text-[10px] text-gray-600 font-mono ml-auto">v{{ v }}</span>
+        <button (click)="openReleaseNotes()" title="Ver o que há de novo nesta versão"
+          class="text-[10px] text-gray-600 hover:text-indigo-300 font-mono ml-auto transition-colors">
+          v{{ v }}
+        </button>
       }
     </div>
 
@@ -82,4 +85,37 @@
   <main class="flex-1 overflow-auto">
     <router-outlet />
   </main>
+
+  <!-- Notas da versão ("o que há de novo") -->
+  @if (showReleaseNotes()) {
+    <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6"
+      (click)="showReleaseNotes.set(false)">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-800 shrink-0">
+          <div>
+            <h3 class="text-white text-sm font-semibold">Novidades</h3>
+            @if (updateCheck.currentVersion(); as v) {
+              <p class="text-gray-500 text-xs mt-0.5">Versão v{{ v }}</p>
+            }
+          </div>
+          <button (click)="showReleaseNotes.set(false)" class="text-gray-500 hover:text-gray-300">
+            <svg lucideX class="w-4 h-4"></svg>
+          </button>
+        </div>
+        <div class="overflow-y-auto flex-1">
+          @if (updateCheck.releaseNotesLoading()) {
+            <div class="flex items-center gap-2 px-5 py-8 justify-center text-gray-500 text-sm">
+              <svg lucideLoaderCircle class="w-4 h-4 animate-spin"></svg> Carregando...
+            </div>
+          } @else if (updateCheck.releaseNotesError()) {
+            <p class="px-5 py-6 text-red-400 text-sm">{{ updateCheck.releaseNotesError() }}</p>
+          } @else {
+            <pre class="px-5 py-4 text-xs text-gray-300 leading-relaxed"
+                 style="white-space: pre-wrap; word-break: break-word; font-family: inherit;">{{ updateCheck.releaseNotes() }}</pre>
+          }
+        </div>
+      </div>
+    </div>
+  }
 </div>

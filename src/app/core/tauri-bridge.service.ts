@@ -111,4 +111,8 @@ export class TauriBridgeService {
   appVersion() {
     return this.invoke<string>('app_version');
   }
+
+  getReleaseNotes(repo: string, tag: string) {
+    return this.invoke<string>('get_release_notes', { repo, tag });
+  }
 }
