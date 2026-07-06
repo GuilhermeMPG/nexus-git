@@ -140,6 +140,10 @@ pub struct Link {
     pub issue_title: String,
     pub branch_names: Vec<String>,
     pub sprint_name: String,
+    /// Who's responsible for this link's Git side (branch/MR) — deliberately protected from
+    /// being overwritten by a Wiki merge (see mergeLinksFromMarkdown on the TS side).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub responsible_git: Option<String>,
     pub created_at: String,
     #[serde(default)]
     pub updated_at: String,
@@ -164,6 +168,10 @@ pub struct DevError {
     pub status: ErrorStatus,
     pub group_name: Option<String>,
     pub reported_by: Option<String>,
+    /// Who's responsible for this error's Git side (fix branch/MR) — deliberately protected
+    /// from being overwritten by a Wiki merge (see mergeErrorsFromMarkdown on the TS side).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub responsible_git: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolution_branch: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

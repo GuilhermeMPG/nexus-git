@@ -499,6 +499,14 @@
               }
             </select>
           </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs text-gray-500 shrink-0">Responsável:</span>
+            <input type="text"
+              [ngModel]="selectedResponsible()" (ngModelChange)="selectedResponsible.set($event)"
+              placeholder="Quem é o responsável (Git)"
+              class="flex-1 bg-gray-800 border border-gray-700 text-white text-xs rounded px-2 py-1
+                     placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+          </div>
         }
         <input type="text"
           [ngModel]="branchFilter()" (ngModelChange)="branchFilter.set($event)"
@@ -620,6 +628,14 @@
                   </span>
                 }
               </div>
+              <!-- Responsável (Git) -->
+              <input type="text"
+                [ngModel]="link.responsibleGit ?? ''"
+                (ngModelChange)="updateLinkResponsible(link.issueIid, $event)"
+                placeholder="Responsável"
+                title="Responsável (Git) por este vínculo"
+                class="bg-gray-800 border border-gray-700/50 text-gray-400 text-xs rounded px-1.5 py-0.5
+                       placeholder-gray-700 focus:outline-none focus:border-indigo-500 transition shrink-0 w-24" />
               <!-- Move to sprint -->
               <select [ngModel]="link.sprintName" (ngModelChange)="moveLink(link.issueIid, $event)"
                 class="bg-gray-800 border border-gray-700/50 text-gray-400 text-xs rounded px-1.5 py-0.5

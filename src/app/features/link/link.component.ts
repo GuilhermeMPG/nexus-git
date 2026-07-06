@@ -58,6 +58,7 @@ export class LinkComponent implements OnInit {
         this.selectedBranches.set(new Set());
         this.selectedBranchMulti.set(null);
         this.selectedIssuesMulti.set(new Set());
+        this.selectedResponsible.set('');
       }
     });
   }
@@ -101,6 +102,8 @@ export class LinkComponent implements OnInit {
   protected selectedIssue = signal<Issue | null>(null);
   protected selectedBranches = signal<Set<string>>(new Set());
   protected selectedSprint = signal('');
+  /** Responsável (Git) pelo vínculo sendo criado/atualizado nesta ação. */
+  protected selectedResponsible = signal('');
   protected saving = signal(false);
 
   /** 'issue': 1 card + N branches (original flow). 'branch': 1 branch + N cards (inverse). */
@@ -117,6 +120,7 @@ export class LinkComponent implements OnInit {
     this.selectedBranches.set(new Set());
     this.selectedBranchMulti.set(null);
     this.selectedIssuesMulti.set(new Set());
+    this.selectedResponsible.set('');
   }
 
   protected toggleIssueMulti(iid: number) {
@@ -313,6 +317,7 @@ export class LinkComponent implements OnInit {
       const existing = this.links().find(l => l.issueIid === issue.iid);
       this.selectedBranches.set(new Set(existing?.branchNames ?? []));
       if (existing?.sprintName) this.selectedSprint.set(existing.sprintName);
+      this.selectedResponsible.set(existing?.responsibleGit ?? '');
     }
   }
 
@@ -361,17 +366,21 @@ export class LinkComponent implements OnInit {
     if (!issue || !projectId || this.selectedBranches().size === 0) return;
     this.saving.set(true);
     try {
-      await this.state.addLink(issue.iid, issue.title, [...this.selectedBranches()], this.selectedSprint(), projectId);
+      await this.state.addLink(
+        issue.iid, issue.title, [...this.selectedBranches()], this.selectedSprint(), projectId,
+        this.selectedResponsible().trim(),
+      );
       this.selectedIssue.set(null);
       this.selectedBranches.set(new Set());
+      this.selectedResponsible.set('');
     } finally {
       this.saving.set(false);
     }
   }
 
   /** Vincula UMA branch a VÁRIOS cards de uma vez. addLink já mescla com as branches
-   *  existentes de cada card — não substitui. A sprint escolhida só é aplicada a cards
-   *  ainda sem vínculo; um card já vinculado mantém a sprint que já tinha. */
+   *  existentes de cada card — não substitui. A sprint e o responsável escolhidos só são
+   *  aplicados a cards ainda sem vínculo; um card já vinculado mantém o que já tinha. */
   private async saveBranchToIssues() {
     const branch = this.selectedBranchMulti();
     const projectId = this.activeProjectId();
@@ -383,11 +392,14 @@ export class LinkComponent implements OnInit {
       for (const iid of iids) {
         const issue = issueByIid.get(iid);
         if (!issue) continue;
-        const existingSprint = this.links().find(l => l.issueIid === iid)?.sprintName;
-        await this.state.addLink(iid, issue.title, [branch.name], existingSprint ?? this.selectedSprint(), projectId);
+        const existingLink = this.links().find(l => l.issueIid === iid);
+        const sprint = existingLink?.sprintName ?? this.selectedSprint();
+        const responsible = existingLink?.responsibleGit ?? this.selectedResponsible().trim();
+        await this.state.addLink(iid, issue.title, [branch.name], sprint, projectId, responsible);
       }
       this.selectedBranchMulti.set(null);
       this.selectedIssuesMulti.set(new Set());
+      this.selectedResponsible.set('');
     } finally {
       this.saving.set(false);
     }
@@ -400,10 +412,10 @@ export class LinkComponent implements OnInit {
 
   async exportCsv() {
     this.csvState.set('downloading');
-    const rows: string[][] = [['Sprint', 'Card', 'Título', 'Branches']];
+    const rows: string[][] = [['Sprint', 'Card', 'Título', 'Branches', 'Responsável']];
     for (const grp of this.groupedLinks()) {
       for (const l of grp.links) {
-        rows.push([grp.sprint || 'Sem sprint', `#${l.issueIid}`, l.issueTitle, l.branchNames.join('; ')]);
+        rows.push([grp.sprint || 'Sem sprint', `#${l.issueIid}`, l.issueTitle, l.branchNames.join('; '), l.responsibleGit ?? '']);
       }
     }
     const filename = `vinculos-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -468,6 +480,7 @@ export class LinkComponent implements OnInit {
         issueIid: parseInt(r[1]?.match(/(\d+)/)?.[1] ?? '0', 10),
         issueTitle: r[2]?.trim() ?? '',
         branchNames: (r[3] ?? '').split(';').map((b: string) => b.trim()).filter(Boolean),
+        responsibleGit: r[4]?.trim() ?? '',
       }))
       .filter(r => r.issueIid > 0);
     const { added, updated } = await this.state.mergeCsvLinks(parsed, projectId);
@@ -501,6 +514,10 @@ export class LinkComponent implements OnInit {
 
   async moveLink(issueIid: number, sprintName: string) {
     await this.state.moveLink(issueIid, sprintName, this.activeProjectId());
+  }
+
+  async updateLinkResponsible(issueIid: number, responsibleGit: string) {
+    await this.state.setLinkResponsible(issueIid, this.activeProjectId(), responsibleGit);
   }
 
   async importMilestones() {

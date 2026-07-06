@@ -107,6 +107,9 @@ export interface Link {
   issueTitle: string;
   branchNames: string[];
   sprintName: string;
+  /** Who's responsible for this link's Git side (branch/MR). Deliberately protected from
+   *  being overwritten by a Wiki merge — see mergeLinksFromMarkdown in AppStateService. */
+  responsibleGit?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +124,9 @@ export interface DevError {
   status: ErrorStatus;
   groupName?: string;
   reportedBy?: string;
+  /** Who's responsible for this error's Git side (fix branch/MR). Deliberately protected from
+   *  being overwritten by a Wiki merge — see mergeErrorsFromMarkdown in AppStateService. */
+  responsibleGit?: string;
   resolutionBranch?: string;
   resolutionDescription?: string;
   createdAt: string;

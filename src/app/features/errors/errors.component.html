@@ -348,6 +348,16 @@
                    placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
         </div>
 
+        <!-- Responsável (Git) -->
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Responsável (Git)</label>
+          <input type="text"
+            [ngModel]="formResponsibleGit()" (ngModelChange)="formResponsibleGit.set($event)"
+            placeholder="Quem é responsável pela publicação"
+            class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2
+                   placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition" />
+        </div>
+
         <!-- Grupo -->
         <div>
           <label class="block text-xs text-gray-400 mb-1">Divisão (opcional)</label>
@@ -605,8 +615,11 @@
                       {{ error.status }}
                     </span>
                   </td>
-                  <td class="px-3 py-2.5 w-32 text-gray-400 text-xs">
+                  <td class="px-3 py-2.5 w-32 text-gray-400 text-xs" title="Reportado por">
                     {{ error.reportedBy || '—' }}
+                  </td>
+                  <td class="px-3 py-2.5 w-32 text-gray-400 text-xs" title="Responsável (Git)">
+                    {{ error.responsibleGit || '—' }}
                   </td>
                   <td class="px-3 py-2.5 text-gray-500 text-xs w-20 whitespace-nowrap">
                     {{ formatDate(error.createdAt) }}

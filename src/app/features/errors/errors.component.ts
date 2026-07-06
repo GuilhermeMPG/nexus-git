@@ -77,6 +77,7 @@ export class ErrorsComponent implements OnInit {
   protected formStatus = signal<ErrorStatus>('Pendente');
   protected formGroup = signal('');
   protected formReportedBy = signal('');
+  protected formResponsibleGit = signal('');
   protected formResolutionBranch = signal('');
   protected formResolutionBranchMode = signal<'select' | 'type'>('select');
   protected formResolutionDescription = signal('');
@@ -155,7 +156,7 @@ export class ErrorsComponent implements OnInit {
 
   async exportCsv() {
     this.csvState.set('downloading');
-    const rows: string[][] = [['ID', 'Divisão', 'Descrição', 'Branch', 'Status', 'Reportado por', 'Data', 'Branch Solução', 'Descrição Solução']];
+    const rows: string[][] = [['ID', 'Divisão', 'Descrição', 'Branch', 'Status', 'Reportado por', 'Responsável', 'Data', 'Branch Solução', 'Descrição Solução']];
     for (const grp of this.groupedErrors()) {
       for (const e of grp.errors) {
         rows.push([
@@ -165,6 +166,7 @@ export class ErrorsComponent implements OnInit {
           e.branchRef ?? '',
           e.status,
           e.reportedBy ?? '',
+          e.responsibleGit ?? '',
           new Date(e.createdAt).toLocaleDateString('pt-BR'),
           e.resolutionBranch ?? '',
           e.resolutionDescription ?? '',
@@ -238,8 +240,9 @@ export class ErrorsComponent implements OnInit {
         branchRef: r[3]?.trim() ?? '',
         status: (['Pendente', 'FalsoPositivo', 'Resolvido'].includes(r[4]?.trim() ?? '') ? r[4].trim() : 'Pendente') as ErrorStatus,
         reportedBy: r[5]?.trim() ?? '',
-        resolutionBranch: r[7]?.trim() ?? '',
-        resolutionDescription: r[8]?.trim() ?? '',
+        responsibleGit: r[6]?.trim() ?? '',
+        resolutionBranch: r[8]?.trim() ?? '',
+        resolutionDescription: r[9]?.trim() ?? '',
       }) : ({
         id: '',
         groupName: r[0]?.trim() === 'Sem divisão' ? '' : (r[0]?.trim() ?? ''),
@@ -247,8 +250,9 @@ export class ErrorsComponent implements OnInit {
         branchRef: r[2]?.trim() ?? '',
         status: (['Pendente', 'FalsoPositivo', 'Resolvido'].includes(r[3]?.trim() ?? '') ? r[3].trim() : 'Pendente') as ErrorStatus,
         reportedBy: r[4]?.trim() ?? '',
-        resolutionBranch: r[6]?.trim() ?? '',
-        resolutionDescription: r[7]?.trim() ?? '',
+        responsibleGit: r[5]?.trim() ?? '',
+        resolutionBranch: r[7]?.trim() ?? '',
+        resolutionDescription: r[8]?.trim() ?? '',
       }));
     const { added, updated } = await this.state.mergeCsvErrors(parsed, projectId);
     this.csvImportState.set('done');
@@ -349,6 +353,7 @@ export class ErrorsComponent implements OnInit {
     this.formStatus.set('Pendente');
     this.formGroup.set('');
     this.formReportedBy.set('');
+    this.formResponsibleGit.set('');
     this.formResolutionBranch.set('');
     this.formResolutionBranchMode.set('select');
     this.formResolutionDescription.set('');
@@ -364,6 +369,7 @@ export class ErrorsComponent implements OnInit {
     this.formStatus.set(error.status);
     this.formGroup.set(error.groupName ?? '');
     this.formReportedBy.set(error.reportedBy ?? '');
+    this.formResponsibleGit.set(error.responsibleGit ?? '');
     this.formResolutionBranch.set(error.resolutionBranch ?? '');
     this.formResolutionDescription.set(error.resolutionDescription ?? '');
     this.formBranchMode.set('select');
@@ -432,6 +438,7 @@ export class ErrorsComponent implements OnInit {
           status: this.formStatus(),
           groupName: this.formGroup() || undefined,
           reportedBy: this.formReportedBy().trim() || undefined,
+          responsibleGit: this.formResponsibleGit().trim() || undefined,
           resolutionBranch: resolvido ? (this.formResolutionBranch().trim() || undefined) : undefined,
           resolutionDescription: resolvido ? (this.formResolutionDescription().trim() || undefined) : undefined,
         });
@@ -445,6 +452,7 @@ export class ErrorsComponent implements OnInit {
           this.formReportedBy().trim() || undefined,
           resolvido ? this.formResolutionBranch().trim() || undefined : undefined,
           resolvido ? this.formResolutionDescription().trim() || undefined : undefined,
+          this.formResponsibleGit().trim() || undefined,
         );
       }
       this.resetForm();

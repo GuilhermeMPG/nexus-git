@@ -117,6 +117,30 @@ describe('AppStateService — merge LWW', () => {
       expect(p1Link?.sprintName).toBe('p1-from-wiki');
       expect(p2Link?.sprintName).toBe('p2-local');
     });
+
+    it('never overwrites a locally-set responsibleGit, even when the wiki version wins the merge', async () => {
+      service.links.set([makeLink({ issueIid: 50, sprintName: 's1', responsibleGit: 'Alice', updatedAt: T0 })]);
+      const content = linksWikiContent({
+        links: [makeLink({ issueIid: 50, sprintName: 's2', responsibleGit: 'Bob', updatedAt: T1 })],
+      });
+
+      await service.mergeLinksFromMarkdown(content, 'p1');
+
+      const link = service.links().find(l => l.issueIid === 50);
+      expect(link?.sprintName).toBe('s2'); // the rest of the record does update
+      expect(link?.responsibleGit).toBe('Alice'); // but responsibleGit stays put
+    });
+
+    it('adopts the wiki responsibleGit only when nothing is set locally yet', async () => {
+      service.links.set([makeLink({ issueIid: 51, sprintName: 's1', updatedAt: T0 })]); // no responsibleGit
+      const content = linksWikiContent({
+        links: [makeLink({ issueIid: 51, sprintName: 's2', responsibleGit: 'Bob', updatedAt: T1 })],
+      });
+
+      await service.mergeLinksFromMarkdown(content, 'p1');
+
+      expect(service.links().find(l => l.issueIid === 51)?.responsibleGit).toBe('Bob');
+    });
   });
 
   describe('mergeErrorsFromMarkdown', () => {
@@ -159,6 +183,19 @@ describe('AppStateService — merge LWW', () => {
       const merged = service.errors().find(e => e.id === 'shared-id');
       expect(merged?.projectId).toBe('p1');
       expect(merged?.description).toBe('from p1 wiki');
+    });
+
+    it('never overwrites a locally-set responsibleGit, even when the wiki version wins the merge', async () => {
+      service.errors.set([makeError({ id: 'e50', description: 'old', responsibleGit: 'Alice', updatedAt: T0 })]);
+      const content = errorsWikiContent({
+        errors: [makeError({ id: 'e50', description: 'new', responsibleGit: 'Bob', updatedAt: T1 })],
+      });
+
+      await service.mergeErrorsFromMarkdown(content, 'p1');
+
+      const err = service.errors().find(e => e.id === 'e50');
+      expect(err?.description).toBe('new');
+      expect(err?.responsibleGit).toBe('Alice');
     });
   });
 });

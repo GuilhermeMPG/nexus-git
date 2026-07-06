@@ -203,18 +203,31 @@ export class AppStateService {
   }
 
   // ── Links ─────────────────────────────────────────────────────────────────
-  async addLink(issueIid: number, issueTitle: string, branchNames: string[], sprintName: string, projectId: string) {
+  async addLink(
+    issueIid: number, issueTitle: string, branchNames: string[], sprintName: string, projectId: string,
+    responsibleGit?: string,
+  ) {
     const key = this.linkKey(projectId, issueIid);
     const existing = this.links().findIndex(l => l.projectId === projectId && l.issueIid === issueIid);
     const now = new Date().toISOString();
     if (existing >= 0) {
       const updated = [...this.links()];
       const merged = Array.from(new Set([...updated[existing].branchNames, ...branchNames]));
-      updated[existing] = { ...updated[existing], branchNames: merged, sprintName, updatedAt: now };
+      updated[existing] = {
+        ...updated[existing],
+        branchNames: merged,
+        sprintName,
+        responsibleGit: responsibleGit || updated[existing].responsibleGit,
+        updatedAt: now,
+      };
       this.links.set(updated);
     } else {
       this._deletedLinkKeys.delete(key);
-      this.links.update(l => [...l, { projectId, issueIid, issueTitle, branchNames, sprintName, createdAt: now, updatedAt: now }]);
+      this.links.update(l => [...l, {
+        projectId, issueIid, issueTitle, branchNames, sprintName,
+        responsibleGit: responsibleGit || undefined,
+        createdAt: now, updatedAt: now,
+      }]);
     }
     await this.persist();
   }
@@ -249,7 +262,17 @@ export class AppStateService {
     await this.persist();
   }
 
-  async mergeCsvLinks(rows: { issueIid: number; issueTitle: string; branchNames: string[]; sprintName: string }[], projectId: string): Promise<{ added: number; updated: number }> {
+  async setLinkResponsible(issueIid: number, projectId: string, responsibleGit: string) {
+    const now = new Date().toISOString();
+    this.links.update(l => l.map(x =>
+      x.projectId === projectId && x.issueIid === issueIid
+        ? { ...x, responsibleGit: responsibleGit || undefined, updatedAt: now }
+        : x
+    ));
+    await this.persist();
+  }
+
+  async mergeCsvLinks(rows: { issueIid: number; issueTitle: string; branchNames: string[]; sprintName: string; responsibleGit?: string }[], projectId: string): Promise<{ added: number; updated: number }> {
     const now = new Date().toISOString();
     let added = 0, updated = 0;
     const otherLinks = this.links().filter(l => l.projectId !== projectId);
@@ -258,10 +281,21 @@ export class AppStateService {
       this._deletedLinkKeys.delete(this.linkKey(projectId, row.issueIid));
       const existing = map.get(row.issueIid);
       if (existing) {
-        map.set(row.issueIid, { ...existing, branchNames: row.branchNames, sprintName: row.sprintName, updatedAt: now });
+        map.set(row.issueIid, {
+          ...existing,
+          branchNames: row.branchNames,
+          sprintName: row.sprintName,
+          responsibleGit: row.responsibleGit || existing.responsibleGit,
+          updatedAt: now,
+        });
         updated++;
       } else {
-        map.set(row.issueIid, { projectId, issueIid: row.issueIid, issueTitle: row.issueTitle, branchNames: row.branchNames, sprintName: row.sprintName, createdAt: now, updatedAt: now });
+        map.set(row.issueIid, {
+          projectId, issueIid: row.issueIid, issueTitle: row.issueTitle,
+          branchNames: row.branchNames, sprintName: row.sprintName,
+          responsibleGit: row.responsibleGit || undefined,
+          createdAt: now, updatedAt: now,
+        });
         added++;
       }
     }
@@ -271,7 +305,7 @@ export class AppStateService {
   }
 
   // ── Errors ───────────────────────────────────────────────────────────────
-  async addError(description: string, branchRef: string, status: ErrorStatus, projectId: string, groupName?: string, reportedBy?: string, resolutionBranch?: string, resolutionDescription?: string) {
+  async addError(description: string, branchRef: string, status: ErrorStatus, projectId: string, groupName?: string, reportedBy?: string, resolutionBranch?: string, resolutionDescription?: string, responsibleGit?: string) {
     const now = new Date().toISOString();
     this.errors.update(e => [...e, {
       id: crypto.randomUUID(),
@@ -280,6 +314,7 @@ export class AppStateService {
       branchRef: branchRef || undefined,
       groupName: groupName || undefined,
       reportedBy: reportedBy || undefined,
+      responsibleGit: responsibleGit || undefined,
       resolutionBranch: resolutionBranch || undefined,
       resolutionDescription: resolutionDescription || undefined,
       createdAt: now, updatedAt: now,
@@ -287,7 +322,7 @@ export class AppStateService {
     await this.persist();
   }
 
-  async updateError(id: string, patch: Partial<Pick<DevError, 'description' | 'branchRef' | 'status' | 'groupName' | 'reportedBy' | 'resolutionBranch' | 'resolutionDescription'>>) {
+  async updateError(id: string, patch: Partial<Pick<DevError, 'description' | 'branchRef' | 'status' | 'groupName' | 'reportedBy' | 'responsibleGit' | 'resolutionBranch' | 'resolutionDescription'>>) {
     this.errors.update(list => list.map(e =>
       e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e
     ));
@@ -300,7 +335,7 @@ export class AppStateService {
     await this.persist();
   }
 
-  async mergeCsvErrors(rows: { id: string; description: string; branchRef: string; status: ErrorStatus; groupName: string; reportedBy: string; resolutionBranch: string; resolutionDescription: string }[], projectId: string): Promise<{ added: number; updated: number }> {
+  async mergeCsvErrors(rows: { id: string; description: string; branchRef: string; status: ErrorStatus; groupName: string; reportedBy: string; responsibleGit?: string; resolutionBranch: string; resolutionDescription: string }[], projectId: string): Promise<{ added: number; updated: number }> {
     const now = new Date().toISOString();
     let added = 0, updated = 0;
     const map = new Map(this.errors().map(e => [e.id, e]));
@@ -316,6 +351,7 @@ export class AppStateService {
         branchRef: row.branchRef || undefined,
         groupName: row.groupName || undefined,
         reportedBy: row.reportedBy || undefined,
+        responsibleGit: row.responsibleGit || existing?.responsibleGit,
         resolutionBranch: row.resolutionBranch || undefined,
         resolutionDescription: row.resolutionDescription || undefined,
         createdAt: existing?.createdAt ?? now,
@@ -357,21 +393,21 @@ export class AppStateService {
       const sprintLinks = projectLinks.filter(l => l.sprintName === sprint);
       if (!sprintLinks.length) continue;
       lines.push('', `## ${sprint}`, '');
-      lines.push('| Card | Título | Branches |');
-      lines.push('|------|--------|---------|');
+      lines.push('| Card | Título | Branches | Responsável |');
+      lines.push('|------|--------|---------|-------------|');
       for (const l of sprintLinks) {
         const branches = l.branchNames.map(b => `\`${b}\``).join(', ');
-        lines.push(`| #${l.issueIid} | ${escapeCell(l.issueTitle)} | ${branches} |`);
+        lines.push(`| #${l.issueIid} | ${escapeCell(l.issueTitle)} | ${branches} | ${l.responsibleGit ? escapeCell(l.responsibleGit) : '—'} |`);
       }
     }
 
     if (noSprint.length) {
       lines.push('', '## Sem sprint', '');
-      lines.push('| Card | Título | Branches |');
-      lines.push('|------|--------|---------|');
+      lines.push('| Card | Título | Branches | Responsável |');
+      lines.push('|------|--------|---------|-------------|');
       for (const l of noSprint) {
         const branches = l.branchNames.map(b => `\`${b}\``).join(', ');
-        lines.push(`| #${l.issueIid} | ${escapeCell(l.issueTitle)} | ${branches} |`);
+        lines.push(`| #${l.issueIid} | ${escapeCell(l.issueTitle)} | ${branches} | ${l.responsibleGit ? escapeCell(l.responsibleGit) : '—'} |`);
       }
     }
 
@@ -401,13 +437,14 @@ export class AppStateService {
     const noGroup = projectErrors.filter(e => !e.groupName || !groups.includes(e.groupName));
 
     const renderGroup = (errors: DevError[]) => {
-      lines.push('| Descrição | Branch | Status | Reportado por | Data |');
-      lines.push('|-----------|--------|--------|---------------|------|');
+      lines.push('| Descrição | Branch | Status | Reportado por | Responsável | Data |');
+      lines.push('|-----------|--------|--------|---------------|-------------|------|');
       for (const e of errors) {
         const branch = e.branchRef ? `\`${e.branchRef}\`` : '—';
         const date = new Date(e.createdAt).toLocaleDateString('pt-BR');
         const reporter = e.reportedBy ? escapeCell(e.reportedBy) : '—';
-        lines.push(`| ${escapeCell(e.description)} | ${branch} | ${e.status} | ${reporter} | ${date} |`);
+        const responsible = e.responsibleGit ? escapeCell(e.responsibleGit) : '—';
+        lines.push(`| ${escapeCell(e.description)} | ${branch} | ${e.status} | ${reporter} | ${responsible} | ${date} |`);
       }
     };
 
@@ -675,7 +712,15 @@ export class AppStateService {
       } else {
         const localTime = new Date(local.updatedAt || local.createdAt).getTime();
         const wikiTime = new Date(wikiLink.updatedAt || wikiLink.createdAt).getTime();
-        if (wikiTime > localTime) localMap.set(wikiLink.issueIid, { ...wikiLink, projectId });
+        if (wikiTime > localTime) {
+          // responsibleGit is deliberately never taken from the Wiki side once set locally —
+          // it shouldn't flip just because some unrelated field (branch, sprint...) changed
+          // more recently on the Wiki.
+          localMap.set(wikiLink.issueIid, {
+            ...wikiLink, projectId,
+            responsibleGit: local.responsibleGit || wikiLink.responsibleGit,
+          });
+        }
       }
     }
 
@@ -712,7 +757,14 @@ export class AppStateService {
       } else {
         const localTime = new Date(local.updatedAt).getTime();
         const wikiTime = new Date(wikiErr.updatedAt).getTime();
-        if (wikiTime > localTime) localMap.set(wikiErr.id, { ...wikiErr, projectId });
+        if (wikiTime > localTime) {
+          // responsibleGit is deliberately never taken from the Wiki side once set locally —
+          // see the identical note in mergeLinksFromMarkdown.
+          localMap.set(wikiErr.id, {
+            ...wikiErr, projectId,
+            responsibleGit: local.responsibleGit || wikiErr.responsibleGit,
+          });
+        }
       }
     }
 
