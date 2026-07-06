@@ -13,6 +13,12 @@
     </button>
   </div>
 
+  @if (saveError()) {
+    <div class="mb-5 px-3 py-2.5 bg-red-900/40 border border-red-700/50 rounded-lg text-red-300 text-sm flex items-center gap-2">
+      <svg lucideTriangleAlert class="w-4 h-4 shrink-0"></svg> {{ saveError() }}
+    </div>
+  }
+
   @if (form(); as cfg) {
     <div class="space-y-5">
 
@@ -271,7 +277,7 @@
           <div class="flex items-center gap-3 pl-7">
             <label class="text-sm text-gray-400 shrink-0">A cada</label>
             <select [ngModel]="cfg.autoPublishIntervalMin ?? 30"
-              (ngModelChange)="updateField('autoPublishIntervalMin', $event)"
+              (ngModelChange)="updateField('autoPublishIntervalMin', +$event)"
               class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5
                      focus:outline-none focus:border-indigo-500 transition">
               <option [value]="15">15 minutos</option>
@@ -302,7 +308,7 @@
           <div class="flex items-center gap-3 pl-7">
             <label class="text-sm text-gray-400 shrink-0">A cada</label>
             <select [ngModel]="cfg.autoCheckIntervalMin ?? 15"
-              (ngModelChange)="updateField('autoCheckIntervalMin', $event)"
+              (ngModelChange)="updateField('autoCheckIntervalMin', +$event)"
               class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5
                      focus:outline-none focus:border-indigo-500 transition">
               <option [value]="10">10 minutos</option>
@@ -333,7 +339,7 @@
           <div class="flex items-center gap-3 pl-7">
             <label class="text-sm text-gray-400 shrink-0">A cada</label>
             <select [ngModel]="cfg.updateCheckIntervalMin ?? 360"
-              (ngModelChange)="updateField('updateCheckIntervalMin', $event)"
+              (ngModelChange)="updateField('updateCheckIntervalMin', +$event)"
               class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5
                      focus:outline-none focus:border-indigo-500 transition">
               <option [value]="60">1 hora</option>

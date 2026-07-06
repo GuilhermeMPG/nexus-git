@@ -38,6 +38,7 @@ export class ConfigComponent implements OnInit {
   protected form = signal<AppConfig | null>(null);
   protected saving = signal(false);
   protected saved = signal(false);
+  protected saveError = signal('');
 
   // Project picker modal
   protected pickerOpen = signal(false);
@@ -265,6 +266,7 @@ export class ConfigComponent implements OnInit {
     if (!cfg) return;
     this.saving.set(true);
     this.saved.set(false);
+    this.saveError.set('');
     try {
       await this.configService.save(cfg);
       // Depois de persistir a config, remove vínculos/erros de projetos que não existem mais,
@@ -272,6 +274,11 @@ export class ConfigComponent implements OnInit {
       await this.appState.pruneOrphans(cfg.projects.map(p => p.id));
       this.saved.set(true);
       setTimeout(() => this.saved.set(false), 2500);
+    } catch (e: unknown) {
+      // Sem isso, uma falha (ex.: tipo inválido enviado ao backend) ficava silenciosa — o
+      // usuário via o formulário "aceitar" a mudança mas ela nunca era persistida de fato.
+      const msg = typeof e === 'string' ? e : (e as any)?.message ?? 'Erro desconhecido.';
+      this.saveError.set(`Falha ao salvar: ${msg}`);
     } finally {
       this.saving.set(false);
     }
