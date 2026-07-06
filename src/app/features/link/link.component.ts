@@ -343,6 +343,21 @@ export class LinkComponent implements OnInit {
     return this.links().find(l => l.issueIid === iid)?.sprintName ?? '';
   }
 
+  /** Cards are shared across projects (a single Git source of issues) — so a card already
+   *  linked in ANOTHER project should still read as "already associated" here, even though
+   *  it's fine (and common) to also link it in this project under different branches. Returns
+   *  the names of the other enabled projects that already have a link for this card. */
+  protected linkedElsewhereFor(iid: number): string[] {
+    const activePid = this.activeProjectId();
+    const otherProjectIds = new Set(
+      this.allLinks().filter(l => l.issueIid === iid && l.projectId !== activePid).map(l => l.projectId)
+    );
+    if (!otherProjectIds.size) return [];
+    return this.enabledProjects()
+      .filter(p => otherProjectIds.has(p.id))
+      .map(p => p.name);
+  }
+
   protected canSave = computed(() => {
     if (this.linkMode() === 'issue') {
       return this.selectedIssue() !== null && this.selectedBranches().size > 0;
