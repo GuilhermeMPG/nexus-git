@@ -75,9 +75,20 @@
           </p>
         </div>
 
+        <!-- CA interna / autoassinada (intranet) -->
+        <label class="flex items-center gap-2.5 cursor-pointer select-none">
+          <input type="checkbox"
+            [ngModel]="tlsInsecure()" (ngModelChange)="toggleTlsInsecure($event)"
+            class="accent-indigo-500 w-3.5 h-3.5" />
+          <span class="text-xs text-gray-500">
+            Ignorar verificação de certificado TLS
+            <span class="block text-gray-600">Necessário para instâncias internas com CA própria/autoassinada.</span>
+          </span>
+        </label>
+
         @if (error()) {
-          <div class="px-3 py-2.5 bg-red-900/40 border border-red-700/50 rounded-lg text-red-300 text-sm flex items-center gap-2">
-            <svg lucideTriangleAlert class="w-4 h-4 shrink-0"></svg> {{ error() }}
+          <div class="px-3 py-2.5 bg-red-900/40 border border-red-700/50 rounded-lg text-red-300 text-sm flex items-start gap-2">
+            <svg lucideTriangleAlert class="w-4 h-4 shrink-0 mt-0.5"></svg> {{ error() }}
           </div>
         }
 

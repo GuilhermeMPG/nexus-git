@@ -28,15 +28,25 @@ export class AuthComponent implements OnInit {
   protected restoring = signal(true);
   protected canRetryRestore = signal(false);
 
+  /** Necessário em intranets com GitLab servido por CA interna/autoassinada — precisa estar
+   *  disponível já na tela de login, já que Configurações só é alcançável depois de logar. */
+  protected tlsInsecure = signal(false);
+
   async ngOnInit() {
     try {
       const cfg = await this.configService.load();
       this.gitlabUrl.set(cfg.gitlabBaseUrl);
+      this.tlsInsecure.set(cfg.acceptInvalidCerts ?? false);
       await this.attemptRestore();
     } catch {
       // Fora do contexto Tauri: mantém defaults
       this.restoring.set(false);
     }
+  }
+
+  protected toggleTlsInsecure(value: boolean) {
+    this.tlsInsecure.set(value);
+    this.bridge.setTlsInsecure(value);
   }
 
   protected async attemptRestore() {
@@ -78,7 +88,7 @@ export class AuthComponent implements OnInit {
         projects: [],
         issueLabels: [],
       };
-      await this.configService.save({ ...cfg, gitlabBaseUrl: url });
+      await this.configService.save({ ...cfg, gitlabBaseUrl: url, acceptInvalidCerts: this.tlsInsecure() });
       await this.bridge.saveToken(pat);
       this.session.setSession(pat, user);
       this.router.navigate(['/app']);
@@ -90,6 +100,12 @@ export class AuthComponent implements OnInit {
         this.error.set('Acesso negado (403). Verifique as permissões do token.');
       } else if (msg.startsWith('http_error:')) {
         this.error.set(`Erro HTTP ${msg.split(':')[1]} ao conectar com o GitLab.`);
+      } else if (msg.startsWith('network_error:')) {
+        this.error.set(
+          `Não foi possível conectar ao GitLab. Se esta é uma instância interna (intranet) com ` +
+          `certificado próprio, marque "Ignorar verificação de certificado TLS" abaixo. Caso ` +
+          `contrário, verifique a rede/proxy. (${msg.slice('network_error:'.length)})`
+        );
       } else {
         this.error.set(msg);
       }
